@@ -11,7 +11,7 @@ typedef struct inode
 
     int uid;
     int gid;
-
+    int is_dir;
     //int nlink;
 
     time_t ctime;
@@ -22,10 +22,9 @@ typedef struct inode
 inode* get_nth_inode(int index);
 int get_max_inode_number();
 int get_first_free_inode_from_ibitmap();
-
 void* get_inode_block_base_ptr();
-
 inode* alloc_inode();
-void free_inode();
+void free_inode(int index);
+void initialise_root();
 
 #endif

@@ -1,6 +1,10 @@
 #include "inode.h"
 #include "blocks.h"
 #include "bitmap.h"
+#include "utils.h"
+#include <assert.h>
+#include <stdio.h>
+#include <unistd.h>
 
 void* get_inode_block_base_ptr()
 {
@@ -16,7 +20,7 @@ int get_max_inode_number()
 int get_first_free_inode_from_ibitmap()
 {
     void *inode_bitmap_base=get_bitmap_inode_ptr();
-    for(int i=1;i<get_max_inode_number();i++)
+    for(int i=0;i<get_max_inode_number();i++)
     {
         if(bit_map_get_bit(inode_bitmap_base,i)==0)
             return i;
@@ -40,8 +44,9 @@ inode* alloc_inode()
     new_inode->block_number=alloc_block();
     assert(new_inode->block_number>=0); //fail if max number of blocks reached
     new_inode->inode_number=new_inode_number;
-    new_inode->uid=-1;
-    new_inode->gid=-1;
+    new_inode->uid=getuid();
+    new_inode->gid=getgid();
+    new_inode->is_dir=0; // we consider all inodes files at firstt
     new_inode->ctime=time(NULL);
     new_inode->mtime=time(NULL);
     new_inode->atime=time(NULL);
@@ -55,10 +60,20 @@ inode* alloc_inode()
 void free_inode(int index)
 {
     inode* inode_to_delete=get_nth_inode(index);
-    int inode_number_to_delete=inode_to_delete->block_number;
+    int block_number_to_delete=inode_to_delete->block_number;
+    
+    free_block(block_number_to_delete); //free_block automatically sets the correspondent bit in datablock_bitmap to 0
 
-    free_block(inode_number_to_delete); //free_block automatically sets the corespondent bit in datablock_bitmap to 0
+    void *inode_bitmap_base=get_bitmap_inode_ptr(); 
+    bit_map_set_bit(inode_bitmap_base,index,0); //free the correspondent bit in the inode_bitmap
 
-    void *inode_bitmap_base=get_bitmap_inode_ptr();
-    bit_map_set_bit(inode_bitmap_base,inode_number_to_delete,0);
+    //TO DO: delete from all dentries
+}
+
+void initialise_root()
+{
+    inode* root_inode=alloc_inode();
+    root_inode->is_dir=1;
+    assert(root_inode->inode_number==0);
+    assert(root_inode->block_number==3);
 }
