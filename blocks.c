@@ -63,21 +63,22 @@ void free_block(int n)
 
 int get_next_block_index_number(int current_block)
 {
-    void *current_block = nth_block_pointer(current_block);
-    return current_block+BLOCK_SIZE-sizeof(int);
+    void *current_block_base = nth_block_pointer(current_block);
+    int* res=current_block_base+BLOCK_SIZE-sizeof(int);
+    return *res;
 }
 
 void set_next_block_index_number(int current_block,int next_block_inode)
 {
-    void *current_block = nth_block_pointer(current_block);
-    int* value_pointer= current_block+BLOCK_SIZE-sizeof(int);
+    void *current_block_base = nth_block_pointer(current_block);
+    int* value_pointer= current_block_base+BLOCK_SIZE-sizeof(int);
     *value_pointer= next_block_inode;
 }
 
 void reset_next_block_index_number(int current_block)
 {
-    void *current_block = nth_block_pointer(current_block);
-    int* value_pointer= current_block+BLOCK_SIZE-sizeof(int);
+    void *current_block_base = nth_block_pointer(current_block);
+    int* value_pointer= current_block_base+BLOCK_SIZE-sizeof(int);
     *value_pointer=-1;
 }
 
