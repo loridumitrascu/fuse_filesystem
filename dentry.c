@@ -9,7 +9,7 @@ char* get_filename_from_path(const char* path)
     return strrchr(path,'/')+1;  //TO DO: ce se intampla cand am doar root-ul
 }
 
-int get_file_inode_from_parent_dir(int directory_inode,const char* filename)
+int get_file_inode_from_parent_dir(int directory_inode,const char* filename)   //  TO DO: de testat azi
 {
     inode* parent = get_nth_inode(directory_inode);
     //get parent block 
@@ -27,6 +27,5 @@ int get_file_inode_from_parent_dir(int directory_inode,const char* filename)
             return (dentries_base+i)->inode_number;
         }
     }
-
     return -1;
 }

@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <string.h>
+#include <assert.h>
 #include "blocks.h"
 #include "bitmap.h"
 #include "utils.h"
@@ -18,6 +19,7 @@ int count_blocks_for_bytes(int nr_bytes)
 
 void* nth_block_pointer(int n)
 {
+    assert(n!=-1);
     return blocks_base+n*BLOCK_SIZE;
 }
 
@@ -42,6 +44,9 @@ int alloc_block()
         if(bit_map_get_bit(datab_ptr,i)==0)
         {
             bit_map_set_bit(datab_ptr,i,1);
+
+            //Initialise the value for the next block index with -1 (it's not set in the beginning)
+            set_next_block_index_number(i,-1);
             return i;
         }
     }
@@ -54,4 +59,50 @@ void free_block(int n)
     void* datab_ptr=get_bitmap_datablock_ptr();
     bit_map_set_bit(datab_ptr,n,0);
     memset(nth_block_pointer(n),0,BLOCK_SIZE); //making sure that the block is clean
+}
+
+int get_next_block_index_number(int current_block)
+{
+    void *current_block = nth_block_pointer(current_block);
+    return current_block+BLOCK_SIZE-sizeof(int);
+}
+
+void set_next_block_index_number(int current_block,int next_block_inode)
+{
+    void *current_block = nth_block_pointer(current_block);
+    int* value_pointer= current_block+BLOCK_SIZE-sizeof(int);
+    *value_pointer= next_block_inode;
+}
+
+void reset_next_block_index_number(int current_block)
+{
+    void *current_block = nth_block_pointer(current_block);
+    int* value_pointer= current_block+BLOCK_SIZE-sizeof(int);
+    *value_pointer=-1;
+}
+
+int alloc_new_block_extension(int current_block)
+{
+    int new_block_index= alloc_block();
+    assert(new_block_index!=-1);
+    set_next_block_index_number(current_block,new_block_index);
+    return new_block_index;
+}
+
+int get_last_block_extension_in_list(int start_block)
+{
+    assert(start_block!=-1);
+    int next_block_index=get_next_block_index_number(start_block);
+    if(next_block_index==-1)
+    {
+        return start_block;
+    }
+
+    int previous_block_index;
+    while(next_block_index!=-1)
+    {
+        previous_block_index=next_block_index;
+        next_block_index=get_next_block_index_number(next_block_index);
+    }
+    return previous_block_index;
 }

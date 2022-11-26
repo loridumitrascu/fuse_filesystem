@@ -4,6 +4,7 @@
 #include "utils.h"
 #include <assert.h>
 #include <stdio.h>
+#include <string.h>
 #include <unistd.h>
 
 void* get_inode_block_base_ptr()
@@ -40,7 +41,7 @@ inode* alloc_inode()
     assert(new_inode_number>=0); //fail if max number of inodes reached
     inode* new_inode=get_nth_inode(new_inode_number);
 
-    new_inode->dentries_size=0;
+    new_inode->size=0;
     new_inode->block_number=alloc_block();
     assert(new_inode->block_number>=0); //fail if max number of blocks reached
     new_inode->inode_number=new_inode_number;
@@ -68,6 +69,74 @@ void free_inode(int index)
     bit_map_set_bit(inode_bitmap_base,index,0); //free the correspondent bit in the inode_bitmap
 
     //TO DO: delete from all dentries
+}
+
+void truncate_to_size(int inode_number,int requested_size)
+{
+    inode* current_inode=get_nth_inode(inode_number);
+    int inode_size= current_inode->size;
+    if(inode_size>requested_size)
+    {
+        truncate_down_to_size_for_inode(inode_number,requested_size);
+    }
+    if(inode_size<requested_size)
+    {
+        truncate_up_to_size_for_inode(inode_number,requested_size);
+    }
+}
+
+void truncate_up_to_size_for_inode(int inode_number,int requested_size)
+{
+    inode* current_inode=get_nth_inode(inode_number);
+    int inode_size= current_inode->size;
+    int block_start_number=current_inode->block_number;
+    int current_block=get_last_block_extension_in_list(block_start_number);
+
+    int remaining_size_curr_block=(BLOCK_SIZE-sizeof(int))%inode_size;
+    int inode_size_new = inode_size+remaining_size_curr_block;
+    int left_size_to_grow=requested_size-inode_size_new;
+    int next_block;
+
+    while(left_size_to_grow>0)
+    {
+        left_size_to_grow-=(BLOCK_SIZE-sizeof(int));
+        next_block = alloc_new_block_extension(current_block);
+        current_block=next_block;
+    }
+    current_inode->size=requested_size;
+}
+
+void truncate_down_to_size_for_inode(int inode_number,int requested_size)
+{
+    inode* current_inode=get_nth_inode(inode_number);
+    int inode_size= current_inode->size;
+    int current_block=current_inode->block_number;
+
+    int current_size=0;
+    int block_to_delete_index=-1;
+    
+    while(current_size<requested_size)
+    {
+        current_size+=(BLOCK_SIZE-sizeof(int));
+        int size_to_delete_from_block=current_size-requested_size;
+        if(size_to_delete_from_block<=BLOCK_SIZE-sizeof(int))
+        {
+            void* current_block_base=nth_block_pointer(current_block);
+            block_to_delete_index=get_next_block_index_number(current_block);
+            reset_next_block_index_number(current_block);
+            memset(current_block_base+ (BLOCK_SIZE-sizeof(int)-size_to_delete_from_block),0,size_to_delete_from_block);
+            break;   
+        }
+    }
+    
+    while(block_to_delete_index!=-1)
+    {
+        int next_block_index=get_next_block_index_number(block_to_delete_index);
+        free_block(block_to_delete_index);
+        block_to_delete_index=next_block_index;
+    }
+    
+    current_inode->size=requested_size;
 }
 
 void initialise_root()
