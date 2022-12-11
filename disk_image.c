@@ -112,8 +112,31 @@ int disk_check_permissions(const char *entry_path, int mask)
 
 int disk_get_attributes_from_path(const char *path, struct stat *stbuf)
 {
-    int result = get_attributes_from_path(path, stbuf);
-    return result;
+    int inode_number=get_file_inode_from_path(path);
+    if(inode_number<0)
+    {
+        return -ENOENT;
+    }
+
+    inode* inode=get_nth_inode(inode_number);
+    log_message("Verify stats for inode %d\n", inode_number);
+
+    stbuf->st_atime=inode->atime;
+    stbuf->st_ctime=inode->ctime;
+    stbuf->st_mtime=inode->mtime;
+
+    stbuf->st_uid=inode->uid;
+    stbuf->st_gid=inode->gid;
+
+    stbuf->st_mode=inode->mode;
+    stbuf->st_nlink=inode->nlink;
+    stbuf->st_size=inode->size;
+
+    stbuf->st_blksize=BLOCK_SIZE;
+
+    stbuf->st_ino=inode->inode_number+1;
+    
+    return 0;
 }
 
 int disk_mknod(const char *path, mode_t mode)
