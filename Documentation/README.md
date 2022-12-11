@@ -28,10 +28,9 @@
 
   2. Accesul la date: cum se mapează apelurile efectuate de un proces pe structurile sale de date (cum manipulează diferite apeluri de sistem datele respective).
 
-Astfel, pentru a obține un sistem funcțional, vom avea 2 pași în implementare:
    </p>
    
-### 1. Structura sistemului de fișiere
+### Structura sistemului de fișiere
  <p align="justify">
  Sistemul de fișiere implică 5 blocuri majore - superblocul, lista de inoduri, bitmap-uri pentru date și inode-uri și blocurile de date. Vom stabili dimensiunea unui bloc de date la 4096 octeți (4K octeți) fiecare. În momentul în care sistemul de fișiere este montat, directorul rădăcină este creat. Inode-urile vor fi stocate într-o tabelă de inode-uri, fiecare conținând metadatele despre un fișier/director. Aceste metadate includ numărul inodului, tipul fișierului, numărul de linkuri, uid, gid, permisiunile asociate cu acest fișier etc. Pentru început, tabela va fi goală și inode-ul corespunzător rădăcinii va corespunde primei intrării - are index 0. De asemenea, va trebui să reținem ce blocuri de date avem disponibile și câte există pentru fiecare fișier. Pentru a realiza acest lucru, la crearea unui nou fișier, vom verifica mai întâi bitmap-ul de date și pe cel de inode-uri pentru a găsi un bloc de date gol și un inod care este nealocat (care deține numărul de inod 0 în bitmap). Odată creat fișierul, acesta poate fi deschis pentru citire și scriere și vor fi actualizate structurie de date necesare. Când un fișier existent este recreat, acesta este trunchiat la dimensiunea 0 și tot conținutul său va trebui suprascris. Când un fișier este eliminat, tot conținutul acestuia este eliminat din blocul său de date, intrarea corespunzătoare acestui fișier este eliminată din directorul părinte, bitmap-ul este actualizat și conținutul inode-ului său este reinițializat.
   
@@ -101,4 +100,77 @@ Sistemul de fișiere ar trebui să poată realiza următoarele funcționalităț
 sudo apt-get update
 sudo apt-get install libfuse-dev
 ```
+
+## Detalii de implementare:
+
+### 1.Initializarea sistemului de fisiere
+
+<p align="justify">
+La initializare, avem 2 cazuri posibile:
+
+&emsp; • Fisierul folosit ca emulator de disc(disk_iso) nu există. În acest caz, avem un sistem de fișiere ce este pentru prima dată montat. Fisierul ce reprezintă disk-ul va fi creat și mapat într-o zonă din memoria fizică, având dimensiunea de 1MO folosind mmap. De-a lungul proiectului ne vom referi doar la această zonă de 1MO pentru a salva datele în fișier (memory-mapped file). Totodată, trebuie să inițializăm bitmap-ul de blocuri de date cu intrările corespunzătoare tabelei de inode-uri si blocului de bitmap-uri. Trebuie să inițializăm root-ul și adaugăt în tabela de inode-uri și în bitmap-ul de inode-uri.
+
+&emsp; • Fișierul folosit ca emulator de disc(disk-iso) există deja. În acest caz, sistemul de fișiere trebuie remontat pentru a asigura persistența.
+</p>
+
+### 2.Bitmap-urile de blocuri și de inode-uri
+
+<p align="justify">
+Bitmap-ul de inode-uri se afla în primul bloc de date din disk_iso, imediat dupa bitmap-ul de date (care are exact 256 de biți corespunzători celor 256 de blocuri de date). Fiecare bit din bitmap reprezintă starea blocului/inode-ului de la indexul respectiv (bit de 0 pe pozitia x => blocul/inode-ul cu numarul x este liber. Bit de 1 pe pozitia x => blocul/inode-ul cu numarul x este ocupat). Acest mod de lucru ne permite să ținem cu ușurință o evidență a disponibilității structurilor menționate într-un mod mult mai rapid decât într-o abordare cu arbori.
+</p>
+
+### 3.Blocurile de date
+
+<p align="justify">
+Primul bloc de date util este cel cu numărul 3 și este corespunzător root-ului. 
+Un bloc de date dimensiunea de 4096 de octeți, dar are dimensiunea utilă de 4092 de octeți deoarece ultimii 4 octeți din fiecare bloc sunt folosiți pentru a reține o valoare întreagă ce reprezintă numărul următorului bloc de date folosit. Astfel, pentru un fișier a cărui dimensiune depășește dimensiunea unui bloc, vom putea obține o listă înlănțuită de blocuri de date alocate folosindu-ne de acest mod de reprezentare. În mod implicit, valoarea de la finalul blocului de date este -1, ceea ce ne indică finalul listei de blocuri de date.
+
+În cazul unui director, blocul de date va conține dentry-urile fișierelor sau directoarelor conținute de acesta.
+
+Alocarea blocurilor se face căutând în bitmap prima intrare diferită de 0.
+</p>
+
+### 4.Inode-urile
+
+<p align="justify">
+
+Un inode va reține următoarele informații: size(dimensiunea reala a fișierului), block_number(inode-ul primului bloc de date), inode_number(numărul inode-ului ~ identificatorul său), mode(permisiunile), uid, gid, nlink, is_dir(o valoare ce reține dacă inode-ul este corespunzător unui fișier sau unui director), ctime, mtime și atime.
+
+La alocarea unui inode,acesta va avea dimensiunea 0 și va fi considerat un fișier regulat. Modificările necesare pentru director vor fi realizate imediat după alocare.
+
+Ștergerea unui inode presupune dezalocarea tuturor blocurilor de date atribuite acestuia, ștergerea sa din blocul de dentry-uri ale părintelui, ștergerea sa din bitmap-ul de inode-uri precum și dezalocarea din tabela de inode-uri.
+
+La modificarea dimensiunii unui fisier(fie la scriere, fie la trunchiere) sau la adaugarea unui dentry într-un director, se va folosi functia **truncate_to_size** care are ca scop alocarea si dezalocarea de blocuri de date suplimentare pentru acesta. De asemenea, tot ea se ocupa de gestionarea variabilei size.
+
+</p>
+
+### 5.Dentry-urile
+
+<p align="justify">
+
+
+Dentry-urile exista doar in blocul de date al directoarelor. Un dentry este o structura de date ce retine inode-ul unui copil al directorului si numele fisierului/directorului corespunzător. Putem sa privim un dentry ca o componenta specifică dintr-un path. Rolul ei este să faciliteza operațiile necesare pentru un director cum ar fi căutarea unui fișier/director într-o cale (lucru care implică parcurgerea fiecărei componente, asigurându-se că aceasta este validă).
+Modul prin care se face asocierea dintre o cale dată și un fișier este spargerea fiecărei componente în funcție de "/", plecând de la dentry-urile root-ului și căutarea numelui următoarei componente printre acestea. Procedeul se repetă până se ajunge la fișierul/directorul dorit.
+
+</p>
+
+##  Operații FUSE
+
+### 1.fs_init
+
+Funcția se ocupă cu inițializarea sistemului de fișiere
+
+### 2.fs_access
+
+Funcție care corespunde apelului de sistem access(2).
+Ea verifică existența unui fișier/director și dacă utilizatorul are permisiunile necesare.
+În plus, se vor modifica access time și change time.
+
+### 3.fs_getattr
+Funcție ce va fi apelată de către stat. De asemenea, e apelată când se doresc informațiile din inode. (structura stat)
+
+### 4.fs.mknod
+Funcție ce va fi apelată la crearea unui fișier regulat nou. 
+În plus, se vor modifica și access time, modify time si change time.
+
 
