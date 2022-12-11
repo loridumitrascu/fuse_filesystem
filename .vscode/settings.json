@@ -5,6 +5,7 @@
         "assert.h": "c",
         "blocks.h": "c",
         "string.h": "c",
-        "bitmap.h": "c"
+        "bitmap.h": "c",
+        "mman.h": "c"
     }
 }

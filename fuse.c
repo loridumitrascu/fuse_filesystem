@@ -1,6 +1,6 @@
 #define _XOPEN_SOURCE 700
 #define FUSE_USE_VERSION 29
-#define _BSD_SOURCE
+#define _DEFAULT_SOURCE
 #include <stdio.h>
 #include <stdint.h>
 #include <string.h>

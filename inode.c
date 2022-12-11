@@ -1,4 +1,4 @@
-#define _BSD_SOURCE
+#define _DEFAULT_SOURCE
 #include "inode.h"
 #include "blocks.h"
 #include "bitmap.h"

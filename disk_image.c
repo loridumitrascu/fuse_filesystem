@@ -17,25 +17,26 @@ void disk_mount_the_filesystem(const char* disk_iso_path)
 {
     //check if the disk_iso file exists. 
     int result = access(disk_iso_path,F_OK);
-    if(result==ENOENT)
+    if(result<0)
     {
-        //if it doesn't exist, it_s an empty filesystem
-        init_filesystem(disk_iso_path);
-        log_message("Created the disk_iso\n");
-    }
-    else
-    {
-        if(result>0)
+        if(errno==ENOENT)
         {
-            //if it exist, initialise the existing data
-            //TO DO: call the remount function
-            log_message("Created from the existing disk_iso\n");
+            //if it doesn't exist, it_s an empty filesystem
+            init_filesystem(disk_iso_path);
+            log_message("Created the disk_iso\n");
         }
         else
         {
-            log_message("Error at disk mounting...Disk_iso access error\n");
+            log_message("Error at disk mounting...Disk_iso access error,%s %d\n",disk_iso_path,result);
             return;
         }
+
+    }
+    else
+    {
+            //if it exist, initialise the existing data
+            //TO DO: call the remount function
+            log_message("Created from the existing disk_iso\n");
     }
 }
 
@@ -87,15 +88,16 @@ void unmap_filesystem(void* disk_iso_base)
 int disk_access(const char* entry_path)
 {
     //check if the path is a valid and the file/dir exists
+   log_message("%s\n",entry_path);
    int inode_number = get_file_inode_from_path(entry_path);
    if(inode_number<0)
         return -1;
     
     //update the timestamps for given inode
+    log_message("%d\n",inode_number);
     inode* inode = get_nth_inode(inode_number);
     inode->atime=time(NULL);
     inode->ctime=time(NULL);
-
     return 0;
 }
 
