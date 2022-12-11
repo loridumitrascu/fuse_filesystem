@@ -74,7 +74,7 @@ void free_inode(int index)
     bit_map_set_bit(inode_bitmap_base, index, 0); // free the correspondent bit in the inode_bitmap
 
     // TO DO: delete from all dentries
-
+    // TO DO: memset 0 in tabela de inoduri
 }
 
 void truncate_to_size(int inode_number, int requested_size)
@@ -98,7 +98,7 @@ void truncate_up_to_size_for_inode(int inode_number, int requested_size)
     int block_start_number = current_inode->block_number;
     int current_block = get_last_block_extension_in_list(block_start_number);
 
-    int remaining_size_curr_block = (BLOCK_SIZE - sizeof(int)) % inode_size;
+    int remaining_size_curr_block = (BLOCK_SIZE - sizeof(int)) - (inode_size % (BLOCK_SIZE - sizeof(int)));
     int inode_size_new = inode_size + remaining_size_curr_block;
     int left_size_to_grow = requested_size - inode_size_new;
     int next_block;
@@ -119,19 +119,23 @@ void truncate_down_to_size_for_inode(int inode_number, int requested_size)
     int current_block = current_inode->block_number;
 
     int current_size = 0;
-    int block_to_delete_index = -1;
+    int block_to_delete_index = current_block;
 
     while (current_size < requested_size)
     {
         current_size += (BLOCK_SIZE - sizeof(int));
-        int size_to_delete_from_block = current_size - requested_size;
+        int size_to_delete_from_block = requested_size - current_size;
         if (size_to_delete_from_block <= BLOCK_SIZE - sizeof(int))
         {
             void *current_block_base = nth_block_pointer(current_block);
             block_to_delete_index = get_next_block_index_number(current_block);
             reset_next_block_index_number(current_block);
-            memset(current_block_base + (BLOCK_SIZE - sizeof(int) - size_to_delete_from_block), 0, size_to_delete_from_block);
+            memset(current_block_base + size_to_delete_from_block, 0, ((BLOCK_SIZE - sizeof(int)) - size_to_delete_from_block));
             break;
+        }
+        else
+        {
+            current_block=get_next_block_index_number(current_block);
         }
     }
 
