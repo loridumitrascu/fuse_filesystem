@@ -3,11 +3,41 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <sys/mman.h>
+#include <errno.h>
+
 #include "disk_image.h"
 #include "bitmap.h"
 #include "utils.h"
 #include "inode.h"
 #include "blocks.h"
+#include "dentry.h"
+#include "log.h"
+
+void disk_mount_the_filesystem(const char* disk_iso_path)
+{
+    //check if the disk_iso file exists. 
+    int result = access(disk_iso_path,F_OK);
+    if(result==ENOENT)
+    {
+        //if it doesn't exist, it_s an empty filesystem
+        init_filesystem(disk_iso_path);
+        log_message("Created the disk_iso\n");
+    }
+    else
+    {
+        if(result>0)
+        {
+            //if it exist, initialise the existing data
+            //TO DO: call the remount function
+            log_message("Created from the existing disk_iso\n");
+        }
+        else
+        {
+            log_message("Error at disk mounting...Disk_iso access error\n");
+            return;
+        }
+    }
+}
 
 void init_filesystem(const char* disk_iso_path)
 {
@@ -18,8 +48,7 @@ void init_filesystem(const char* disk_iso_path)
     //mark the blocks for the inode table as used    
     bit_map_set_bit(blocks_bitmap,1,1);
     bit_map_set_bit(blocks_bitmap,2,1);
-
-    //TO DO: initialise root
+    //we initialise the root
     initialise_root();
 
 }
@@ -53,4 +82,30 @@ void unmap_filesystem(void* disk_iso_base)
     //unmap the disk_iso 
     int ret_value = munmap(disk_iso_base, SYS_SIZE);
     assert(ret_value==0);
+}
+
+int disk_access(const char* entry_path)
+{
+    //check if the path is a valid and the file/dir exists
+   int inode_number = get_file_inode_from_path(entry_path);
+   if(inode_number<0)
+        return -1;
+    
+    //update the timestamps for given inode
+    inode* inode = get_nth_inode(inode_number);
+    inode->atime=time(NULL);
+    inode->ctime=time(NULL);
+
+    return 0;
+}
+
+int disk_check_permissions(const char* entry_path,int mask)
+{
+    int inode_number = get_file_inode_from_path(entry_path);
+    inode* inode = get_nth_inode(inode_number);
+    if((inode->mode & mask)==mask)
+    {
+        return 0;
+    }
+    return -1;
 }

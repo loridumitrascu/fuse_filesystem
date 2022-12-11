@@ -1,3 +1,4 @@
+#define _BSD_SOURCE
 #include "inode.h"
 #include "blocks.h"
 #include "bitmap.h"
@@ -6,6 +7,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
+#include <sys/stat.h>
 
 void *get_inode_block_base_ptr()
 {
@@ -47,10 +49,12 @@ inode *alloc_inode()
     new_inode->inode_number = new_inode_number;
     new_inode->uid = getuid();
     new_inode->gid = getgid();
-    new_inode->is_dir = 0; // we consider all inodes files at firstt
+    new_inode->is_dir = 0; // we consider all inodes files at firs
     new_inode->ctime = time(NULL);
     new_inode->mtime = time(NULL);
     new_inode->atime = time(NULL);
+    new_inode->nlink = 1;
+    new_inode->mode = S_IFREG|0644;
 
     void *inode_bitmap_base = get_bitmap_inode_ptr();
     bit_map_set_bit(inode_bitmap_base, new_inode_number, 1);
@@ -60,6 +64,7 @@ inode *alloc_inode()
 
 void free_inode(int index)
 {
+    //TO DO: DE RELUAT CAND SE AJUNGE LA REMOVE SI LINKURI PENTRU CA NU E BINE
     inode *inode_to_delete = get_nth_inode(index);
     int block_number_to_delete = inode_to_delete->block_number;
 
@@ -69,6 +74,7 @@ void free_inode(int index)
     bit_map_set_bit(inode_bitmap_base, index, 0); // free the correspondent bit in the inode_bitmap
 
     // TO DO: delete from all dentries
+
 }
 
 void truncate_to_size(int inode_number, int requested_size)
@@ -143,6 +149,8 @@ void initialise_root()
 {
     inode *root_inode = alloc_inode();
     root_inode->is_dir = 1;
+    root_inode->nlink=2;
+    root_inode->mode=S_IFDIR | 0755;
     assert(root_inode->inode_number == 0);
     assert(root_inode->block_number == 3);
 }

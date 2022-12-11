@@ -12,7 +12,7 @@ typedef struct inode
     int uid;
     int gid;
     int is_dir;
-    //int nlink;
+    int nlink;
 
     time_t ctime;
     time_t mtime;

@@ -10,7 +10,7 @@ char *get_filename_from_path(const char *path)
     return strrchr(path, '/') + 1;
 }
 
-int get_file_inode_from_parent_dir(int directory_inode, const char *filename) //  TO DO: de testat azi
+int get_file_inode_from_parent_dir(int directory_inode, const char *filename) 
 {
     inode *parent = get_nth_inode(directory_inode);
     // get parent block
@@ -43,7 +43,10 @@ int get_file_inode_from_path(const char *path)
     while (curr_name != NULL)
     {
         int curr_inode = get_file_inode_from_parent_dir(curr_parent_inode, curr_name);
-        assert(curr_inode != -1);
+        if(curr_inode<0)
+        {
+            return -1;
+        }
         curr_parent_inode = curr_inode;
         curr_name = strtok(NULL, "/");
     }
