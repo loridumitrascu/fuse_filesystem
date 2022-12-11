@@ -16,6 +16,10 @@ char *get_filename_from_path(const char *path)
 int get_file_inode_from_parent_dir(int directory_inode, const char *filename) 
 {
     inode *parent = get_nth_inode(directory_inode);
+    if(parent->is_dir==0)
+    {
+        return -1;
+    }
     // get parent block
     void *parent_dentry_block = nth_block_pointer(parent->block_number);
     // get number of dentries for parent
