@@ -68,11 +68,11 @@ int get_next_block_index_number(int current_block)
     return *res;
 }
 
-void set_next_block_index_number(int current_block,int next_block_inode)
+void set_next_block_index_number(int current_block,int next_block_index)
 {
     void *current_block_base = nth_block_pointer(current_block);
     int* value_pointer= current_block_base+BLOCK_SIZE-sizeof(int);
-    *value_pointer= next_block_inode;
+    *value_pointer= next_block_index;
 }
 
 void reset_next_block_index_number(int current_block)

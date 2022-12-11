@@ -1,9 +1,12 @@
 #include "dentry.h"
 #include <string.h>
 #include <assert.h>
+#include <errno.h>
 #include <stdlib.h>
+#include <sys/types.h>
 #include "inode.h"
 #include "blocks.h"
+#include "log.h"
 
 char *get_filename_from_path(const char *path)
 {
@@ -59,7 +62,8 @@ void add_dir_to_inode_dentries(int inode_number, char *dir_name, int new_dir_ino
     inode *current_inode = get_nth_inode(inode_number);
     void *dentry_block = nth_block_pointer(current_inode->block_number);
     dentry *dentries_base = (dentry *)dentry_block;
-    truncate_up_to_size_for_inode(inode_number, current_inode->size + sizeof(dentry));
+    current_inode->size+=sizeof(dentry);
+    truncate_up_to_size_for_inode(inode_number, current_inode->size);
 
     dentry new_dentry;
     strcpy(new_dentry.name, dir_name);
@@ -92,7 +96,10 @@ void delete_dir_from_inode_dentries(int inode_number, char *dir_name)
     }
 
     if (i < dentries_number) // only if we found our dentry
+    {   
+        curr_inode->size-=sizeof(dentry);
         truncate_down_to_size_for_inode(inode_number, curr_inode->size - sizeof(dentry));
+    }
 }
 
 void get_parent_path_and_child_name(const char* path, char* parent_path, char* child_name)
@@ -107,4 +114,35 @@ void get_parent_path_and_child_name(const char* path, char* parent_path, char* c
         parent_path[strlen(parent_path)-1]='\0';
     else 
         parent_path[strlen(parent_path)]='\0';
+}
+
+
+
+int get_attributes_from_path(const char *path, struct stat *stbuf)
+{
+    int inode_number=get_file_inode_from_path(path);
+    if(inode_number<0)
+    {
+        return -ENOENT;
+    }
+
+    inode* inode=get_nth_inode(inode_number);
+    log_message("Verify stats for inode %d\n", inode_number);
+
+    stbuf->st_atime=inode->atime;
+    stbuf->st_ctime=inode->ctime;
+    stbuf->st_mtime=inode->mtime;
+
+    stbuf->st_uid=inode->uid;
+    stbuf->st_gid=inode->gid;
+
+    stbuf->st_mode=inode->mode;
+    stbuf->st_nlink=inode->nlink;
+    stbuf->st_size=inode->size;
+
+    stbuf->st_blksize=BLOCK_SIZE;
+
+    stbuf->st_ino=inode->inode_number+1;
+    
+    return 0;
 }

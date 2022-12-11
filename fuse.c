@@ -45,13 +45,24 @@ int fs_access(const char* path,int mask)
     return 0;
 }
 
+int fs_getattr(const char *path, struct stat *stbuf)
+{
+    int result = disk_get_attributes_from_path(path, stbuf);
+    return result;
+}
+
+int fs_mknod(const char *path, mode_t mode, dev_t rdev)
+{
+    int result = disk_mknod(path, mode);
+    return result;
+}
+
 static struct fuse_operations operations =
     {
-        //.getattr = fs_getattr,
+        .getattr = fs_getattr,
         .init = fs_init,
         .access   = fs_access,
-        //.getattr  = nufs_getattr,
-        //.mknod    = nufs_mknod,
+        .mknod    = fs_mknod,
         //.readdir = fs_readdir,
 };
 

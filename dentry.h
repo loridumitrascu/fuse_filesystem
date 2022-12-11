@@ -2,6 +2,7 @@
 #define _DENTRY_H
 
 #include "utils.h"
+#include "sys/stat.h"
 
 typedef struct dentry{
     int inode_number;
@@ -19,5 +20,7 @@ void add_dir_to_inode_dentries(int inode_number, char* dir_name, int new_dir_ino
 void delete_dir_from_inode_dentries(int inode_number, char* dir_name);
 
 void get_parent_path_and_child_name(const char* path, char* parent_path, char* child_name);
+
+int get_attributes_from_path(const char *path, struct stat *stbuf);
 
 #endif
