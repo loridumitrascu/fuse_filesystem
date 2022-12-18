@@ -54,7 +54,7 @@ inode *alloc_inode()
     new_inode->mtime = time(NULL);
     new_inode->atime = time(NULL);
     new_inode->nlink = 1;
-    new_inode->mode = S_IFREG|0644;
+    new_inode->mode = S_IFREG | 0644;
 
     void *inode_bitmap_base = get_bitmap_inode_ptr();
     bit_map_set_bit(inode_bitmap_base, new_inode_number, 1);
@@ -64,7 +64,7 @@ inode *alloc_inode()
 
 void free_inode(int index)
 {
-    //TO DO: DE RELUAT CAND SE AJUNGE LA REMOVE SI LINKURI PENTRU CA NU E BINE
+    // TO DO: DE RELUAT CAND SE AJUNGE LA REMOVE SI LINKURI PENTRU CA NU E BINE
     inode *inode_to_delete = get_nth_inode(index);
     int block_number_to_delete = inode_to_delete->block_number;
 
@@ -135,7 +135,7 @@ void truncate_down_to_size_for_inode(int inode_number, int requested_size)
         }
         else
         {
-            current_block=get_next_block_index_number(current_block);
+            current_block = get_next_block_index_number(current_block);
         }
     }
 
@@ -153,8 +153,14 @@ void initialise_root()
 {
     inode *root_inode = alloc_inode();
     root_inode->is_dir = 1;
-    root_inode->nlink=2;
-    root_inode->mode=S_IFDIR | 0755;
+    root_inode->nlink = 2;
+    root_inode->mode = S_IFDIR | 0755;
     assert(root_inode->inode_number == 0);
     assert(root_inode->block_number == 3);
+}
+
+void update_root()
+{
+    inode* root_inode =get_nth_inode(0);
+    root_inode->atime=time(NULL);
 }

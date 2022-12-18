@@ -28,15 +28,13 @@ void disk_mount_the_filesystem(const char *disk_iso_path)
         else
         {
             log_message("Error at disk mounting...Disk_iso access error,%s %d\n", disk_iso_path, result);
-            return;
         }
+        return;
     }
-    else
-    {
-        // if it exist, initialise the existing data
-        // TO DO: call the remount function
-        log_message("Created from the existing disk_iso\n");
-    }
+    // if it exist, initialise the existing data
+    // TO DO: call the remount function
+    remount_disk_image(disk_iso_path);
+    log_message("Created from the existing disk_iso\n");
 }
 
 void init_filesystem(const char *disk_iso_path)
@@ -50,6 +48,12 @@ void init_filesystem(const char *disk_iso_path)
     bit_map_set_bit(blocks_bitmap, 2, 1);
     // we initialise the root
     initialise_root();
+}
+
+void remount_disk_image(const char *disk_iso_path)
+{
+    blocks_base = init_disk_image(disk_iso_path);
+    update_root();
 }
 
 // initialise the disk image that represents the FileSystem
@@ -72,6 +76,10 @@ void *init_disk_image(const char *disk_iso_path)
     // MAP_SHARED BECAUSE WE WANT TO ENSURE THAT DATA WRITTEN IS PUT ON THE DISK (SHARE THE FILE WITH OTHER SO PROCESSES)
     disk_iso_base = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     assert(disk_iso_base != ((void *)-1));
+
+    //we close the file descriptor. We no longer need it
+    int ret = close(fd);
+    assert(ret >= 0);
 
     return disk_iso_base;
 }
@@ -112,34 +120,34 @@ int disk_check_permissions(const char *entry_path, int mask)
 
 int disk_get_attributes_from_path(const char *path, struct stat *stbuf)
 {
-    int inode_number=get_file_inode_from_path(path);
+    int inode_number = get_file_inode_from_path(path);
 
-    int result = disk_get_attributes_from_inode(inode_number,stbuf);
+    int result = disk_get_attributes_from_inode(inode_number, stbuf);
 
     return result;
 }
 
 int disk_get_attributes_from_inode(int inode_number, struct stat *stbuf)
 {
-    if(inode_number<0)
+    if (inode_number < 0)
     {
         return -ENOENT;
     }
-    inode* inode=get_nth_inode(inode_number);
+    inode *inode = get_nth_inode(inode_number);
 
-    stbuf->st_atime=inode->atime;
-    stbuf->st_ctime=inode->ctime;
-    stbuf->st_mtime=inode->mtime;
+    stbuf->st_atime = inode->atime;
+    stbuf->st_ctime = inode->ctime;
+    stbuf->st_mtime = inode->mtime;
 
-    stbuf->st_uid=inode->uid;
-    stbuf->st_gid=inode->gid;
+    stbuf->st_uid = inode->uid;
+    stbuf->st_gid = inode->gid;
 
-    stbuf->st_mode=inode->mode;
-    stbuf->st_nlink=inode->nlink;
-    stbuf->st_size=inode->size;
-    stbuf->st_blksize=BLOCK_SIZE;
+    stbuf->st_mode = inode->mode;
+    stbuf->st_nlink = inode->nlink;
+    stbuf->st_size = inode->size;
+    stbuf->st_blksize = BLOCK_SIZE;
 
-    stbuf->st_ino=inode->inode_number;
+    stbuf->st_ino = inode->inode_number;
     return 0;
 }
 
@@ -179,44 +187,58 @@ int disk_mknod(const char *path, mode_t mode)
     return 0;
 }
 
-int disk_readdir(const char* path,void* buf,fuse_fill_dir_t filler)
+int disk_change_utimens(const char *path,const struct timespec times[2])
 {
-    int inode_number=get_file_inode_from_path(path);
-    if(inode_number<0)
+    int inode_number = get_file_inode_from_path(path);
+    if (inode_number < 0)
+        return -ENOENT;
+        
+    inode *inode = get_nth_inode(inode_number);
+    inode->atime = times[0].tv_sec;
+    inode->mtime = times[1].tv_sec;
+
+    return 0;
+}
+
+
+int disk_readdir(const char *path, void *buf, fuse_fill_dir_t filler)
+{
+    int inode_number = get_file_inode_from_path(path);
+    if (inode_number < 0)
     {
         return -ENOENT;
     }
-    inode* inode=get_nth_inode(inode_number);
+    inode *inode = get_nth_inode(inode_number);
 
-    if(inode->is_dir==0)
+    if (inode->is_dir == 0)
     {
         return -ENOENT;
     }
 
-    void* dir_dentry_block = nth_block_pointer(inode->block_number);
+    void *dir_dentry_block = nth_block_pointer(inode->block_number);
     int dentries_number = inode->size / sizeof(dentry);
     dentry *dentries_base = (dentry *)dir_dentry_block;
-    
+
     // define a structure st for file/dir attributes
-    //we fill the buffer with the dentries and their st
+    // we fill the buffer with the dentries and their st
     struct stat st;
-    for(int i=0;i<dentries_number;i++)
+    for (int i = 0; i < dentries_number; i++)
     {
-        int fill_st = disk_get_attributes_from_inode(dentries_base[i].inode_number,&st);
-        if(fill_st<0)
+        int fill_st = disk_get_attributes_from_inode(dentries_base[i].inode_number, &st);
+        if (fill_st < 0)
             return -ENOENT;
         filler(buf, dentries_base[i].name, &st, 0);
     }
 
-    //we fill the buffer for the . and .. entries
-    //for the .
-    int fill_st = disk_get_attributes_from_inode(inode_number,&st);
-    if(fill_st<0)
+    // we fill the buffer for the . and .. entries
+    // for the .
+    int fill_st = disk_get_attributes_from_inode(inode_number, &st);
+    if (fill_st < 0)
         return -ENOENT;
     filler(buf, ".", &st, 0);
 
-    //for the ..
-    if(strcmp(path,"/")==0)
+    // for the ..
+    if (strcmp(path, "/") == 0)
     {
         filler(buf, "..", &st, 0);
     }
@@ -238,13 +260,13 @@ int disk_readdir(const char* path,void* buf,fuse_fill_dir_t filler)
             return -ENOENT;
         }
 
-        int fill_st = disk_get_attributes_from_inode(parent_inode_number,&st);
+        int fill_st = disk_get_attributes_from_inode(parent_inode_number, &st);
         filler(buf, "..", &st, 0);
 
         free(parent_path);
         free(child_name);
     }
-    //update timestamps
+    // update timestamps
     inode->atime = time(NULL);
 
     return 0;

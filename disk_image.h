@@ -9,6 +9,8 @@ void disk_mount_the_filesystem(const char* disk_iso_path);
 
 void* init_disk_image(const char* disk_iso_path);
 
+void remount_disk_image(const char* disk_iso_path);
+
 void init_filesystem(const char* disk_iso_path);
 
 void unmap_filesystem(void* disk_iso_base);
@@ -22,6 +24,8 @@ int disk_get_attributes_from_path(const char *path, struct stat *stbuf);
 int disk_get_attributes_from_inode(int inode_number, struct stat *stbuf);
 
 int disk_mknod(const char *path, mode_t mode);
+
+int disk_change_utimens(const char *path,const struct timespec times[2]);
 
 int disk_readdir(const char* path,void* buf,fuse_fill_dir_t filler);
 

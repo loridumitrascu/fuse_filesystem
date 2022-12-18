@@ -76,7 +76,7 @@ void add_dir_to_inode_dentries(int inode_number, char *dir_name, int new_dir_ino
     log_message("avem nume dentry nou: %s, inode dentry nou: %d\n", new_dentry.name, new_dentry.inode_number);
 
     //-1 because the current_inode->size modified its value in the truncate_up_to_size_for_inode.
-    dentries_base[current_inode->size / sizeof(dentry) -1] = new_dentry;
+    dentries_base[current_inode->size / sizeof(dentry) - 1] = new_dentry;
 }
 
 // TO DO: verifica

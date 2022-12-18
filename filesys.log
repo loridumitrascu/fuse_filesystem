@@ -4,5 +4,7 @@ Mounted the filesystem
 0
 /
 0
-Vrem sa adaugam al inodeul 0, directorul file1, inode-ul 1
-avem nume dentry nou: file1, inode dentry nou: 1
+Vrem sa adaugam al inodeul 0, directorul f1, inode-ul 1
+avem nume dentry nou: f1, inode dentry nou: 1
+Vrem sa adaugam al inodeul 0, directorul f2, inode-ul 2
+avem nume dentry nou: f2, inode dentry nou: 2

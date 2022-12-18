@@ -6,6 +6,7 @@
         "blocks.h": "c",
         "string.h": "c",
         "bitmap.h": "c",
-        "mman.h": "c"
+        "mman.h": "c",
+        "stat.h": "c"
     }
 }
