@@ -21,3 +21,4 @@ int bit_map_get_bit(void* bitmap,int bit_position)
 {
     return (((uint8_t*)bitmap)[byte_index])>>(7-bit_index_in_byte)&1;
 }
+

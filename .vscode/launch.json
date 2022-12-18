@@ -7,7 +7,7 @@
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
             "args": [
-                "-f", "${fileDirname}/mpoint"
+                "-f", "${fileDirname}/mpoint","-d"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",

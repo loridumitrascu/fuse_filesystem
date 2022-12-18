@@ -24,6 +24,7 @@ void *fs_init(struct fuse_conn_info *conn)
 
     log_message("Mounted the filesystem\n");
 }
+
 int fs_access(const char* path,int mask)
 {
     //function that checks the existance of the inode for a dir or a file
@@ -48,6 +49,9 @@ int fs_access(const char* path,int mask)
 int fs_getattr(const char *path, struct stat *stbuf)
 {
     int result = disk_get_attributes_from_path(path, stbuf);
+    //we add +1 to display the correct inode because in our filesystem inodes start from 0. 
+    //In any other filesystem, they start from 1.
+    stbuf->st_ino=stbuf->st_ino+1;
     return result;
 }
 
@@ -57,13 +61,18 @@ int fs_mknod(const char *path, mode_t mode, dev_t rdev)
     return result;
 }
 
+int fs_readdir(const char* path, void* buf, fuse_fill_dir_t filler, off_t offset, struct fuse_file_info* fi)
+{
+    int result = disk_readdir(path,buf,filler);
+    return result;
+}
 static struct fuse_operations operations =
-    {
+{
         .getattr = fs_getattr,
         .init = fs_init,
         .access   = fs_access,
         .mknod    = fs_mknod,
-        //.readdir = fs_readdir,
+        .readdir = fs_readdir,
 };
 
 int main(int argc,char* argv[])

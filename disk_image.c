@@ -113,13 +113,19 @@ int disk_check_permissions(const char *entry_path, int mask)
 int disk_get_attributes_from_path(const char *path, struct stat *stbuf)
 {
     int inode_number=get_file_inode_from_path(path);
+
+    int result = disk_get_attributes_from_inode(inode_number,stbuf);
+
+    return result;
+}
+
+int disk_get_attributes_from_inode(int inode_number, struct stat *stbuf)
+{
     if(inode_number<0)
     {
         return -ENOENT;
     }
-
     inode* inode=get_nth_inode(inode_number);
-    log_message("Verify stats for inode %d\n", inode_number);
 
     stbuf->st_atime=inode->atime;
     stbuf->st_ctime=inode->ctime;
@@ -131,11 +137,9 @@ int disk_get_attributes_from_path(const char *path, struct stat *stbuf)
     stbuf->st_mode=inode->mode;
     stbuf->st_nlink=inode->nlink;
     stbuf->st_size=inode->size;
-
     stbuf->st_blksize=BLOCK_SIZE;
 
-    stbuf->st_ino=inode->inode_number+1;
-    
+    stbuf->st_ino=inode->inode_number;
     return 0;
 }
 
@@ -163,6 +167,7 @@ int disk_mknod(const char *path, mode_t mode)
         log_message("mknod: child_inode not correctly allocated!\n");
         return -1;
     }
+
     child_inode->mode = mode;
     int child_inode_number = child_inode->inode_number;
 
@@ -170,6 +175,77 @@ int disk_mknod(const char *path, mode_t mode)
 
     free(parent_path);
     free(child_name);
+
+    return 0;
+}
+
+int disk_readdir(const char* path,void* buf,fuse_fill_dir_t filler)
+{
+    int inode_number=get_file_inode_from_path(path);
+    if(inode_number<0)
+    {
+        return -ENOENT;
+    }
+    inode* inode=get_nth_inode(inode_number);
+
+    if(inode->is_dir==0)
+    {
+        return -ENOENT;
+    }
+
+    void* dir_dentry_block = nth_block_pointer(inode->block_number);
+    int dentries_number = inode->size / sizeof(dentry);
+    dentry *dentries_base = (dentry *)dir_dentry_block;
+    
+    // define a structure st for file/dir attributes
+    //we fill the buffer with the dentries and their st
+    struct stat st;
+    for(int i=0;i<dentries_number;i++)
+    {
+        int fill_st = disk_get_attributes_from_inode(dentries_base[i].inode_number,&st);
+        if(fill_st<0)
+            return -ENOENT;
+        filler(buf, dentries_base[i].name, &st, 0);
+    }
+
+    //we fill the buffer for the . and .. entries
+    //for the .
+    int fill_st = disk_get_attributes_from_inode(inode_number,&st);
+    if(fill_st<0)
+        return -ENOENT;
+    filler(buf, ".", &st, 0);
+
+    //for the ..
+    if(strcmp(path,"/")==0)
+    {
+        filler(buf, "..", &st, 0);
+    }
+    else
+    {
+        char *parent_path = malloc(sizeof(char) * MAX_PATH);
+        char *child_name = malloc(sizeof(char) * MAX_FILENAME);
+        if (!parent_path || !child_name)
+        {
+            log_message("mknod: Malloc error!\n");
+            exit(EXIT_FAILURE);
+        }
+        get_parent_path_and_child_name(path, parent_path, child_name);
+
+        int parent_inode_number = get_file_inode_from_path(parent_path);
+        if (parent_inode_number < 0)
+        {
+            log_message("mknod: parent_ino_number not found!\n");
+            return -ENOENT;
+        }
+
+        int fill_st = disk_get_attributes_from_inode(parent_inode_number,&st);
+        filler(buf, "..", &st, 0);
+
+        free(parent_path);
+        free(child_name);
+    }
+    //update timestamps
+    inode->atime = time(NULL);
 
     return 0;
 }
