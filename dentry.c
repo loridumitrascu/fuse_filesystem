@@ -63,7 +63,6 @@ int get_file_inode_from_path(const char *path)
 
 void add_dir_to_inode_dentries(int inode_number, char *dir_name, int new_dir_inode)
 {
-    log_message("Vrem sa adaugam al inodeul %d, directorul %s, inode-ul %d\n", inode_number, dir_name, new_dir_inode);
     inode *current_inode = get_nth_inode(inode_number);
     void *dentry_block = nth_block_pointer(current_inode->block_number);
     dentry *dentries_base = (dentry *)dentry_block;
@@ -73,7 +72,6 @@ void add_dir_to_inode_dentries(int inode_number, char *dir_name, int new_dir_ino
     strcpy(new_dentry.name, dir_name);
     new_dentry.name[strlen(new_dentry.name)] = '\0';
     new_dentry.inode_number = new_dir_inode;
-    log_message("avem nume dentry nou: %s, inode dentry nou: %d\n", new_dentry.name, new_dentry.inode_number);
 
     //-1 because the current_inode->size modified its value in the truncate_up_to_size_for_inode.
     dentries_base[current_inode->size / sizeof(dentry) - 1] = new_dentry;

@@ -8,7 +8,6 @@
 #include <sys/mman.h>
 #include <fuse.h>
 #include <errno.h>
-#include <sys/mount.h>
 
 #include "disk_image.h"
 #include "utils.h"
@@ -18,9 +17,9 @@
 #include "inode.h"
 #include "dentry.h"
 
-FILE * log_fis;
+FILE *log_fis;
 
-void* fs_init(struct fuse_conn_info *conn)
+void *fs_init(struct fuse_conn_info *conn)
 {
     // function that initialise the file system
     disk_mount_the_filesystem("disk_image");
@@ -64,6 +63,24 @@ int fs_mknod(const char *path, mode_t mode, dev_t rdev)
     return result;
 }
 
+int fs_chmod(const char *path, mode_t mode)
+{
+    int result = disk_chmod(path, mode);
+    return result;
+}
+
+int fs_link(const char *from, const char *to)
+{
+    int result = disk_link(from, to);
+    return result;
+}
+
+int fs_mkdir(const char *path, mode_t mode)
+{
+    int result = disk_mkdir(path, mode);
+    return result;
+}
+
 int fs_create(const char *path, mode_t mode, struct fuse_file_info *info)
 {
     dev_t dev_whatever = 0;
@@ -72,7 +89,7 @@ int fs_create(const char *path, mode_t mode, struct fuse_file_info *info)
 
 int fs_utimens(const char *path, const struct timespec times[2])
 {
-    int result = disk_change_utimens(path,times);
+    int result = disk_change_utimens(path, times);
     return result;
 }
 
@@ -88,6 +105,9 @@ static struct fuse_operations operations =
         .access = fs_access,
         .getattr = fs_getattr,
         .mknod = fs_mknod,
+        .chmod = fs_chmod,
+        .link = fs_link,
+        .mkdir = fs_mkdir,
         .create = fs_create,
         .utimens = fs_utimens,
         .readdir = fs_readdir,

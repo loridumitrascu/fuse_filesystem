@@ -3,6 +3,8 @@
 #include <fcntl.h>
 #include <assert.h>
 #include <sys/mman.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 #include <errno.h>
 
 #include "disk_image.h"
@@ -77,7 +79,7 @@ void *init_disk_image(const char *disk_iso_path)
     disk_iso_base = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     assert(disk_iso_base != ((void *)-1));
 
-    //we close the file descriptor. We no longer need it
+    // we close the file descriptor. We no longer need it
     int ret = close(fd);
     assert(ret >= 0);
 
@@ -166,7 +168,7 @@ int disk_mknod(const char *path, mode_t mode)
     if (parent_inode_number < 0)
     {
         log_message("mknod: parent_ino_number not found!\n");
-        return -1;
+        return -ENOENT;
     }
 
     inode *child_inode = alloc_inode();
@@ -187,19 +189,87 @@ int disk_mknod(const char *path, mode_t mode)
     return 0;
 }
 
-int disk_change_utimens(const char *path,const struct timespec times[2])
+int disk_chmod(const char *path, mode_t mode)
+{
+    int inode_number = get_file_inode_from_path(path);
+    if (inode_number < 0)
+    {
+        log_message("Invalid path for chmod\n");
+        return -ENOENT;
+    }
+    inode *inode = get_nth_inode(inode_number);
+    inode->mode = mode;
+
+    // update timestamps
+    inode->atime = time(NULL);
+    inode->mtime = time(NULL);
+    return 0;
+}
+
+int disk_link(const char *from, const char *to)
+{
+    int source_inode_number = get_file_inode_from_path(from);
+    if (source_inode_number < 0)
+    {
+        log_message("Invalid source for link operation\n");
+        return -ENOENT;
+    }
+
+    int destination_inode = get_file_inode_from_path(to);
+    if (destination_inode > 0)
+    {
+        log_message("Destination already exists for link operation\n");
+        return -EEXIST;
+    }
+
+    char parent_dest_path[MAX_PATH], dest_name[MAX_FILENAME];
+    get_parent_path_and_child_name(to, parent_dest_path, dest_name);
+
+    int parent_dest_inode_number = get_file_inode_from_path(parent_dest_path);
+    if (parent_dest_inode_number < 0)
+    {
+        log_message("Impossible to reach destination\n");
+        return -ENOENT;
+    }
+
+    inode *source_inode = get_nth_inode(source_inode_number);
+    source_inode->nlink++;
+
+    add_dir_to_inode_dentries(parent_dest_inode_number, dest_name, source_inode_number);
+
+    // update timestamps
+    source_inode->atime = time(NULL);
+    source_inode->mtime = time(NULL);
+
+    return 0;
+}
+
+int disk_mkdir(const char *path, mode_t mode)
+{
+    int result = disk_mknod(path, mode);
+    if (result < 0)
+        return -1;
+
+    int inode_number = get_file_inode_from_path(path);
+    inode *inode = get_nth_inode(inode_number);
+    inode->is_dir = 1;
+    inode->mode = mode | S_IFDIR;
+    inode->nlink = 2;
+    return 0;
+}
+
+int disk_change_utimens(const char *path, const struct timespec times[2])
 {
     int inode_number = get_file_inode_from_path(path);
     if (inode_number < 0)
         return -ENOENT;
-        
+
     inode *inode = get_nth_inode(inode_number);
     inode->atime = times[0].tv_sec;
     inode->mtime = times[1].tv_sec;
 
     return 0;
 }
-
 
 int disk_readdir(const char *path, void *buf, fuse_fill_dir_t filler)
 {

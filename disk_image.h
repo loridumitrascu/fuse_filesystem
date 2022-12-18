@@ -25,6 +25,12 @@ int disk_get_attributes_from_inode(int inode_number, struct stat *stbuf);
 
 int disk_mknod(const char *path, mode_t mode);
 
+int disk_chmod(const char *path, mode_t mode);
+
+int disk_link(const char *from, const char *to);
+
+int disk_mkdir(const char *path, mode_t mode);
+
 int disk_change_utimens(const char *path,const struct timespec times[2]);
 
 int disk_readdir(const char* path,void* buf,fuse_fill_dir_t filler);
