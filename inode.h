@@ -6,6 +6,7 @@ typedef struct inode
 {
     int size;
     int block_number;
+    int number_of_blocks;
     int inode_number;
     int mode;
 

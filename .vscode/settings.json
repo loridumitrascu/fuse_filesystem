@@ -8,6 +8,7 @@
         "bitmap.h": "c",
         "mman.h": "c",
         "stat.h": "c",
-        "fcntl.h": "c"
+        "fcntl.h": "c",
+        "type_traits": "c"
     }
 }

@@ -92,7 +92,7 @@ int alloc_new_block_extension(int current_block)
 
 int get_last_block_extension_in_list(int start_block)
 {
-    assert(start_block != -1);
+    assert(start_block >= 0);
     int next_block_index = get_next_block_index_number(start_block);
     if (next_block_index == -1)
     {
@@ -106,4 +106,26 @@ int get_last_block_extension_in_list(int start_block)
         next_block_index = get_next_block_index_number(next_block_index);
     }
     return previous_block_index;
+}
+
+int get_nth_block_in_list(int start_block, int nth)
+{
+    assert(start_block >= 0);
+
+    if (nth == 0)
+    {
+        return start_block;
+    }
+
+    int next_block;
+    int previous_block = start_block;
+
+    for (int i = 0; i < nth; i++)
+    {
+        next_block = get_next_block_index_number(previous_block);
+        if (next_block == -1)
+            return -1;
+        previous_block = next_block;
+    }
+    return next_block;
 }

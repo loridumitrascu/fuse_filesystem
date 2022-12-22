@@ -21,4 +21,5 @@ int alloc_new_block_extension(int current_block);
 
 int get_last_block_extension_in_list(int start_block);
 
+int get_nth_block_in_list(int start_block, int nth);
 #endif

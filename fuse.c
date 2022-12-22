@@ -99,6 +99,18 @@ int fs_readdir(const char *path, void *buf, fuse_fill_dir_t filler, off_t offset
     return result;
 }
 
+int fs_write(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
+{
+    int result = disk_write(path,buf,size,offset);
+    return result;
+}
+
+int fs_read(const char *path, const char *buf, size_t size, off_t offset, struct fuse_file_info *fi)
+{
+    int result = disk_read(path,buf,size,offset);
+    return result;
+}
+
 static struct fuse_operations operations =
     {
         .init = fs_init,
@@ -111,7 +123,8 @@ static struct fuse_operations operations =
         .create = fs_create,
         .utimens = fs_utimens,
         .readdir = fs_readdir,
-
+        .write = fs_write,
+        .read = fs_read
 };
 
 int main(int argc, char *argv[])

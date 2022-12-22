@@ -1,4 +1,4 @@
-#define _BSD_SOURCE
+#define _DEFAULT_SOURCE
 #include <stdio.h>
 #include <unistd.h>
 #include <fcntl.h>
@@ -11,7 +11,6 @@
 #include "disk_image.h"
 #include "bitmap.h"
 #include "utils.h"
-#include "inode.h"
 #include "blocks.h"
 #include "dentry.h"
 #include "log.h"
@@ -149,6 +148,7 @@ int disk_get_attributes_from_inode(int inode_number, struct stat *stbuf)
     stbuf->st_nlink = inode->nlink;
     stbuf->st_size = inode->size;
     stbuf->st_blksize = BLOCK_SIZE;
+    stbuf->st_blocks = inode->number_of_blocks;
 
     stbuf->st_ino = inode->inode_number;
     return 0;
@@ -156,6 +156,7 @@ int disk_get_attributes_from_inode(int inode_number, struct stat *stbuf)
 
 int disk_mknod(const char *path, mode_t mode)
 {
+    // makes a regular file
     char *parent_path = malloc(sizeof(char) * MAX_PATH);
     char *child_name = malloc(sizeof(char) * MAX_FILENAME);
     if (!parent_path || !child_name)
@@ -209,6 +210,7 @@ int disk_chmod(const char *path, mode_t mode)
 
 int disk_link(const char *from, const char *to)
 {
+    // Creates a hardlink
     int source_inode_number = get_file_inode_from_path(from);
     if (source_inode_number < 0)
     {
@@ -232,10 +234,10 @@ int disk_link(const char *from, const char *to)
         log_message("Impossible to reach destination\n");
         return -ENOENT;
     }
-
+    // update source's number of links
     inode *source_inode = get_nth_inode(source_inode_number);
     source_inode->nlink++;
-
+    // add the source inode to destinantion
     add_dir_to_inode_dentries(parent_dest_inode_number, dest_name, source_inode_number);
 
     // update timestamps
@@ -247,6 +249,7 @@ int disk_link(const char *from, const char *to)
 
 int disk_mkdir(const char *path, mode_t mode)
 {
+    // A directory is a file with 2 nlinks and mode S_IFDIR
     int result = disk_mknod(path, mode);
     if (result < 0)
         return -1;
@@ -261,6 +264,7 @@ int disk_mkdir(const char *path, mode_t mode)
 
 int disk_change_utimens(const char *path, const struct timespec times[2])
 {
+    // change the atime and mtime
     int inode_number = get_file_inode_from_path(path);
     if (inode_number < 0)
         return -ENOENT;
@@ -340,5 +344,96 @@ int disk_readdir(const char *path, void *buf, fuse_fill_dir_t filler)
     // update timestamps
     inode->atime = time(NULL);
 
+    return 0;
+}
+
+int write_data_in_file(inode *file, const char *buf, size_t size, off_t offset)
+{
+    // grow file size if necessary
+    int requested_size = offset + size;
+    if (requested_size > file->size)
+        truncate_up_to_size_for_inode(file->inode_number, requested_size);
+
+    // get the first file's block we need to write to
+    int first_block_count = (int)offset / (BLOCK_SIZE - sizeof(int));
+    int first_block_index = get_nth_block_in_list(file->block_number, first_block_count);
+    if(first_block_index<0)
+    {
+        return -ENOENT;
+    }
+    void *current_block = nth_block_pointer(first_block_index);
+
+    // get starting point in current_block
+    int offset_in_block = ((int)offset) % (BLOCK_SIZE - sizeof(int));
+    void *start_point = current_block + offset_in_block;
+
+    // begin writting to file
+    int is_first_block = 1;
+    int remaining_size = size;
+    int buf_offset = 0;
+    int current_block_index = first_block_index;
+    while (remaining_size > 0)
+    {
+        int available_block_size;
+        if (is_first_block == 1)
+        {
+            available_block_size = BLOCK_SIZE - sizeof(int) - offset_in_block;
+            is_first_block = 0;
+        }
+        else
+        {
+            available_block_size = BLOCK_SIZE - sizeof(int);
+        }
+
+        int length = remaining_size > available_block_size ? available_block_size : remaining_size;
+
+        strncpy((char *)start_point, buf + buf_offset, length);
+
+        remaining_size -= available_block_size;
+        buf_offset += length;
+
+        // update the block we need to write to
+        int next_block_index = get_next_block_index_number(current_block_index);
+        current_block_index = next_block_index;
+        if (next_block_index == -1 && remaining_size > 0)
+        {
+            return -ENOENT;
+        }
+        if(next_block_index!=-1)
+            start_point = nth_block_pointer(next_block_index);
+    }
+    return 0;
+}
+
+int disk_write(const char *path, const char *buf, size_t size, off_t offset)
+{
+    int inode_number = get_file_inode_from_path(path);
+    if (inode_number < 0)
+    {
+        return -ENOENT;
+    }
+    inode *file_inode = get_nth_inode(inode_number);
+
+    if (file_inode->is_dir == 1)
+    {
+        return -ENOENT;
+    }
+
+    // write data into file
+    int ret_value = write_data_in_file(file_inode, buf, size, offset);
+    if (ret_value < 0)
+    {
+        return -ENOENT;
+    }    
+
+    // update time stamps
+    file_inode->atime = time(NULL);
+    file_inode->mtime = time(NULL);
+
+    return size;
+}
+
+int disk_read(const char *path, const char *buf, size_t size, off_t offset)
+{
     return 0;
 }

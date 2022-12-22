@@ -54,6 +54,7 @@ inode *alloc_inode()
     new_inode->mtime = time(NULL);
     new_inode->atime = time(NULL);
     new_inode->nlink = 1;
+    new_inode->number_of_blocks = 1;
     new_inode->mode = S_IFREG | 0644;
 
     void *inode_bitmap_base = get_bitmap_inode_ptr();
@@ -107,6 +108,8 @@ void truncate_up_to_size_for_inode(int inode_number, int requested_size)
     {
         left_size_to_grow -= (BLOCK_SIZE - sizeof(int));
         next_block = alloc_new_block_extension(current_block);
+        //update number of blocks for inode
+        current_inode->number_of_blocks++;
         current_block = next_block;
     }
     current_inode->size = requested_size;

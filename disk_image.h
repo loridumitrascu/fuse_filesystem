@@ -5,6 +5,8 @@
 #include <fuse.h>
 #include <string.h>
 
+#include "inode.h"
+
 void disk_mount_the_filesystem(const char* disk_iso_path);
 
 void* init_disk_image(const char* disk_iso_path);
@@ -34,5 +36,11 @@ int disk_mkdir(const char *path, mode_t mode);
 int disk_change_utimens(const char *path,const struct timespec times[2]);
 
 int disk_readdir(const char* path,void* buf,fuse_fill_dir_t filler);
+
+int write_data_in_file(inode* file,const char* buf,size_t size,off_t offset);
+
+int disk_write(const char *path, const char *buf, size_t size, off_t offset);
+
+int disk_read(const char *path, const char *buf, size_t size, off_t offset);
 
 #endif
