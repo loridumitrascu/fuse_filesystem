@@ -357,7 +357,7 @@ int write_data_in_file(inode *file, const char *buf, size_t size, off_t offset)
     // get the first file's block we need to write to
     int first_block_count = (int)offset / (BLOCK_SIZE - sizeof(int));
     int first_block_index = get_nth_block_in_list(file->block_number, first_block_count);
-    if(first_block_index<0)
+    if (first_block_index < 0)
     {
         return -ENOENT;
     }
@@ -399,7 +399,7 @@ int write_data_in_file(inode *file, const char *buf, size_t size, off_t offset)
         {
             return -ENOENT;
         }
-        if(next_block_index!=-1)
+        if (next_block_index != -1)
             start_point = nth_block_pointer(next_block_index);
     }
     return 0;
@@ -424,7 +424,7 @@ int disk_write(const char *path, const char *buf, size_t size, off_t offset)
     if (ret_value < 0)
     {
         return -ENOENT;
-    }    
+    }
 
     // update time stamps
     file_inode->atime = time(NULL);
@@ -433,7 +433,90 @@ int disk_write(const char *path, const char *buf, size_t size, off_t offset)
     return size;
 }
 
-int disk_read(const char *path, const char *buf, size_t size, off_t offset)
+int read_data_from_file(inode *file, char *buf, size_t size, off_t offset)
 {
+    // get the first file's block we need to read from
+    int first_block_count = (int)offset / (BLOCK_SIZE - sizeof(int));
+    int first_block_index = get_nth_block_in_list(file->block_number, first_block_count);
+    if (first_block_index < 0)
+    {
+        return -ENOENT;
+    }
+    void *current_block = nth_block_pointer(first_block_index);
+
+    // get starting point in current_block
+    int offset_in_block = ((int)offset) % (BLOCK_SIZE - sizeof(int));
+    void *start_point = current_block + offset_in_block;
+
+    // begin reading from file
+    int is_first_block = 1;
+    int remaining_size = size;
+    int buf_offset = 0;
+    int current_block_index = first_block_index;
+
+    // check to see if we read past EOF
+    if (file->size < offset + remaining_size)
+    {
+        // we shrink the remaining_size until EOF
+        remaining_size = file->size - offset;
+    }
+
+    while (remaining_size > 0)
+    {
+        int available_block_size;
+        if (is_first_block == 1)
+        {
+            available_block_size = BLOCK_SIZE - sizeof(int) - offset_in_block;
+            is_first_block = 0;
+        }
+        else
+        {
+            available_block_size = BLOCK_SIZE - sizeof(int);
+        }
+
+        int length = remaining_size > available_block_size ? available_block_size : remaining_size;
+
+        strncpy(buf + buf_offset, (char *)start_point, length);
+
+        remaining_size -= available_block_size;
+        buf_offset += length;
+
+        // update the block we need to read from
+        int next_block_index = get_next_block_index_number(current_block_index);
+        current_block_index = next_block_index;
+        if (remaining_size > 0 && next_block_index == -1)
+        {
+            // nothing left to read from file.
+            return 0;
+        }
+        if (next_block_index != -1)
+            start_point = nth_block_pointer(next_block_index);
+    }
     return 0;
+}
+
+int disk_read(const char *path, char *buf, size_t size, off_t offset)
+{
+    int inode_number = get_file_inode_from_path(path);
+    if (inode_number < 0)
+    {
+        return -ENOENT;
+    }
+    inode *file_inode = get_nth_inode(inode_number);
+
+    if (file_inode->is_dir == 1)
+    {
+        return -ENOENT;
+    }
+
+    // read data from file
+    int ret_value = read_data_from_file(file_inode, buf, size, offset);
+    if (ret_value < 0)
+    {
+        return ret_value;
+    }
+    // update time stamps
+    file_inode->atime = time(NULL);
+
+    return size;
 }
