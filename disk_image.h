@@ -45,4 +45,7 @@ int read_data_from_file(inode *file, char *buf, size_t size, off_t offset);
 
 int disk_read(const char *path, char *buf, size_t size, off_t offset);
 
+int disk_unlink(const char *path);
+
+int disk_rmdir(const char *path);
 #endif

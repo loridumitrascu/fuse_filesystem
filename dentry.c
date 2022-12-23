@@ -92,7 +92,6 @@ int delete_file_from_inode_dentries(int inode_number, char *file_name)
         {
             found=1;
             inode *file = get_nth_inode(dentries_base[i].inode_number);
-            log_message("Fisier: %s,numar_inode: %d,numar linkuri: %d\n",dentries_base[i].name,file->inode_number,file->nlink);
             if (file->nlink == 1)
             {
                 free_inode(dentries_base[i].inode_number);
@@ -113,7 +112,6 @@ int delete_file_from_inode_dentries(int inode_number, char *file_name)
         return -1;
     }
 
-    truncate_down_to_size_for_inode(inode_number, curr_inode->size - sizeof(dentry));
     //move the dentries from past the file index we removed with 1 step behind 
     for (; i < dentries_number - 1; i++)
     {
@@ -121,6 +119,7 @@ int delete_file_from_inode_dentries(int inode_number, char *file_name)
         strcpy(dentries_base[i].name,dentries_base[i+1].name);
         dentries_base[i].name[strlen(dentries_base[i].name)]='\0';
     }
+        truncate_down_to_size_for_inode(inode_number, curr_inode->size - sizeof(dentry));
     return 0;
 }
 
@@ -136,4 +135,51 @@ void get_parent_path_and_child_name(const char *path, char *parent_path, char *c
         parent_path[strlen(parent_path) - 1] = '\0';
     else
         parent_path[strlen(parent_path)] = '\0';
+}
+
+
+int delete_dir_from_inode_dentries(int inode_number, char* dir_name)
+{
+    inode *curr_inode = get_nth_inode(inode_number);
+    void *current_dentry_block = nth_block_pointer(curr_inode->block_number);
+    int dentries_number = curr_inode->size / sizeof(dentry);
+    dentry *dentries_base = (dentry *)current_dentry_block;
+
+    int i;
+    int found=0;
+    for (i = 0; i < dentries_number; i++)
+    {
+        if (strcmp((dentries_base + i)->name, dir_name) == 0)
+        {
+            found=1;
+            inode *dir = get_nth_inode(dentries_base[i].inode_number);
+            if (dir->nlink == 2)
+            {
+                free_inode(dentries_base[i].inode_number);
+            }
+            else
+            {
+                if(dir->nlink>2)
+                {
+                    dir->nlink--;
+                }
+            }
+            break;
+        }
+    }
+
+    if(found==0)
+    {
+        return -1;
+    }
+
+    //move the dentries from past the file index we removed with 1 step behind 
+    for (; i < dentries_number - 1; i++)
+    {
+        dentries_base[i].inode_number=dentries_base[i+1].inode_number;
+        strcpy(dentries_base[i].name,dentries_base[i+1].name);
+        dentries_base[i].name[strlen(dentries_base[i].name)]='\0';
+    }
+    truncate_down_to_size_for_inode(inode_number, curr_inode->size - sizeof(dentry));
+    return 0;
 }

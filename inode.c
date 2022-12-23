@@ -68,7 +68,6 @@ inode *alloc_inode()
 
 void free_inode(int inode_number)
 {
-    log_message("Intra in free_inode pentru %d\n", inode_number);
     void *inode_bitmap_base = get_bitmap_inode_ptr();
     if (bit_map_get_bit(inode_bitmap_base, inode_number) == 0)
     {
@@ -76,17 +75,15 @@ void free_inode(int inode_number)
     }
     // delete inode data from inode table
     inode *inode_to_delete = get_nth_inode(inode_number);
-    if (inode_to_delete->nlink == 1)
-    {
-        // delete data from blocks
-        truncate_down_to_size_for_inode(inode_number, 0); // it also calls the free_block function which sets all bits to zero in block bitmap for every freed block.It also memsets the blocks to 0
+   
+    // delete data from blocks
+    truncate_down_to_size_for_inode(inode_number, 0); // it also calls the free_block function which sets all bits to zero in block bitmap for every freed block.It also memsets the blocks to 0
 
-        // free the correspondent bit in the inode_bitmap
-        bit_map_set_bit(inode_bitmap_base, inode_number, 0);
+    // free the correspondent bit in the inode_bitmap
+    bit_map_set_bit(inode_bitmap_base, inode_number, 0);
 
-        // delete inode from inode_table
-        memset(inode_to_delete, 0, sizeof(inode));
-    }
+    // delete inode from inode_table
+    memset(inode_to_delete, 0, sizeof(inode));
 }
 
 void truncate_to_size(int inode_number, int requested_size)
@@ -133,8 +130,6 @@ void truncate_down_to_size_for_inode(int inode_number, int requested_size)
     inode *current_inode = get_nth_inode(inode_number);
     int current_block = current_inode->block_number;
     int first_block = current_block;
-    log_message("Blocul de sters: %d pentru inode-ul %d, requested_size:%d\n", current_block, inode_number, requested_size);
-
     int current_size = 0;
     int block_to_delete_index = current_block;
     if (requested_size <= (BLOCK_SIZE - sizeof(int)))

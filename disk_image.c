@@ -520,3 +520,78 @@ int disk_read(const char *path, char *buf, size_t size, off_t offset)
 
     return size;
 }
+
+int disk_unlink(const char *path)
+{
+    int child_inode_number = get_file_inode_from_path(path);
+    if (child_inode_number < 0)
+    {
+        return -ENOENT;
+    }
+
+    char parent_path[MAX_PATH];
+    char child_name[MAX_FILENAME];
+    get_parent_path_and_child_name(path, parent_path, child_name);
+    int parent_inode_number = get_file_inode_from_path(parent_path);
+    if (parent_inode_number < 0)
+    {
+        return -ENOENT;
+    }
+
+    inode *child_inode = get_nth_inode(child_inode_number);
+
+    // update time stamps
+    if (child_inode->nlink >1)
+    {
+        child_inode->atime = time(NULL);
+        child_inode->mtime = time(NULL);
+    }
+
+    // delete the file or decrements its number of hardlinks
+    int result = delete_file_from_inode_dentries(parent_inode_number, child_name);
+    if (result < 0)
+    {
+        return -ENOENT;
+    }
+
+    return 0;
+}
+
+int disk_rmdir(const char *path)
+{
+    int dir_inode_number = get_file_inode_from_path(path);
+    if (dir_inode_number < 0)
+    {
+        return -ENOENT;
+    }
+
+    inode* dir_inode = get_nth_inode(dir_inode_number);
+    
+    //rmdir deletes a dir only if it's empty
+    if(dir_inode->size!=0)
+    {
+        //dir not empty
+        return -ENOTEMPTY;
+    }
+    
+    char parent_path[MAX_PATH];
+    char child_name[MAX_FILENAME];
+    get_parent_path_and_child_name(path, parent_path, child_name);
+    int parent_inode_number = get_file_inode_from_path(parent_path);
+    if (parent_inode_number < 0)
+    {
+        return -ENOENT;
+    }
+    int result = delete_dir_from_inode_dentries(parent_inode_number, child_name);
+    if (result < 0)
+    {
+        return -ENOENT;
+    }
+
+    //update timestamps for parent
+    inode* parent_dir = get_nth_inode(parent_inode_number);
+    parent_dir->atime=time(NULL);
+    parent_dir->mtime=time(NULL);
+
+    return 0;
+}
