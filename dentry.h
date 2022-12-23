@@ -17,7 +17,7 @@ int get_file_inode_from_path(const char* path);
 
 void add_dir_to_inode_dentries(int inode_number, char* dir_name, int new_dir_inode);
 
-void delete_dir_from_inode_dentries(int inode_number, char* dir_name);
+int delete_file_from_inode_dentries(int inode_number, char* file_name);
 
 void get_parent_path_and_child_name(const char* path, char* parent_path, char* child_name);
 

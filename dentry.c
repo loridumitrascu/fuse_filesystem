@@ -77,8 +77,7 @@ void add_dir_to_inode_dentries(int inode_number, char *dir_name, int new_dir_ino
     dentries_base[current_inode->size / sizeof(dentry) - 1] = new_dentry;
 }
 
-// TO DO: verifica
-void delete_dir_from_inode_dentries(int inode_number, char *dir_name)
+int delete_file_from_inode_dentries(int inode_number, char *file_name)
 {
     inode *curr_inode = get_nth_inode(inode_number);
     void *current_dentry_block = nth_block_pointer(curr_inode->block_number);
@@ -86,24 +85,43 @@ void delete_dir_from_inode_dentries(int inode_number, char *dir_name)
     dentry *dentries_base = (dentry *)current_dentry_block;
 
     int i;
+    int found=0;
     for (i = 0; i < dentries_number; i++)
     {
-        if (strcmp((dentries_base + i)->name, dir_name) == 0)
+        if (strcmp((dentries_base + i)->name, file_name) == 0)
         {
-            free_inode(dentries_base[i].inode_number);
+            found=1;
+            inode *file = get_nth_inode(dentries_base[i].inode_number);
+            log_message("Fisier: %s,numar_inode: %d,numar linkuri: %d\n",dentries_base[i].name,file->inode_number,file->nlink);
+            if (file->nlink == 1)
+            {
+                free_inode(dentries_base[i].inode_number);
+            }
+            else
+            {
+                if(file->nlink>1)
+                {
+                    file->nlink--;
+                }
+            }
             break;
         }
     }
 
-    for (; i < dentries_number - 1; i++)
+    if(found==0)
     {
-        dentries_base[i] = dentries_base[i + 1];
+        return -1;
     }
 
-    if (i < dentries_number) // only if we found our dentry
+    truncate_down_to_size_for_inode(inode_number, curr_inode->size - sizeof(dentry));
+    //move the dentries from past the file index we removed with 1 step behind 
+    for (; i < dentries_number - 1; i++)
     {
-        truncate_down_to_size_for_inode(inode_number, curr_inode->size - sizeof(dentry));
+        dentries_base[i].inode_number=dentries_base[i+1].inode_number;
+        strcpy(dentries_base[i].name,dentries_base[i+1].name);
+        dentries_base[i].name[strlen(dentries_base[i].name)]='\0';
     }
+    return 0;
 }
 
 void get_parent_path_and_child_name(const char *path, char *parent_path, char *child_name)
