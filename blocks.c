@@ -59,6 +59,7 @@ void free_block(int n)
     void *datab_ptr = get_bitmap_datablock_ptr();
     bit_map_set_bit(datab_ptr, n, 0);
     memset(nth_block_pointer(n), 0, BLOCK_SIZE); // making sure that the block is clean
+    reset_next_block_index_number(n);
 }
 
 int get_next_block_index_number(int current_block)

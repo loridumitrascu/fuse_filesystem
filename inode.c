@@ -132,25 +132,27 @@ void truncate_down_to_size_for_inode(int inode_number, int requested_size)
     int first_block = current_block;
     int current_size = 0;
     int block_to_delete_index = current_block;
-    if (requested_size <= (BLOCK_SIZE - sizeof(int)))
+    int block_util_size = (BLOCK_SIZE - sizeof(int));
+    if (requested_size <= block_util_size)
     {
         //we are requesting a size less than the first block
         void *current_block_base = nth_block_pointer(current_block);
         block_to_delete_index = get_next_block_index_number(current_block);
-        memset(current_block_base + requested_size, 0, ((BLOCK_SIZE - sizeof(int)) - requested_size));
+        reset_next_block_index_number(current_block);
+        memset(current_block_base + requested_size, 0, (block_util_size - requested_size));
     }
     else
     {
         while (current_size < requested_size)
         {
-            current_size += (BLOCK_SIZE - sizeof(int));
+            current_size += block_util_size;
             int size_to_delete_from_block = requested_size - current_size;
-            if (size_to_delete_from_block <= (BLOCK_SIZE - sizeof(int)))
+            if (size_to_delete_from_block <= block_util_size)
             {
                 void *current_block_base = nth_block_pointer(current_block);
                 block_to_delete_index = get_next_block_index_number(current_block);
                 reset_next_block_index_number(current_block);
-                memset(current_block_base + size_to_delete_from_block, 0, ((BLOCK_SIZE - sizeof(int)) - size_to_delete_from_block));
+                memset(current_block_base + size_to_delete_from_block, 0,(block_util_size - size_to_delete_from_block));
                 break;
             }
             else

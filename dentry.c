@@ -119,7 +119,7 @@ int delete_file_from_inode_dentries(int inode_number, char *file_name)
         strcpy(dentries_base[i].name,dentries_base[i+1].name);
         dentries_base[i].name[strlen(dentries_base[i].name)]='\0';
     }
-        truncate_down_to_size_for_inode(inode_number, curr_inode->size - sizeof(dentry));
+    truncate_down_to_size_for_inode(inode_number, curr_inode->size - sizeof(dentry));
     return 0;
 }
 
