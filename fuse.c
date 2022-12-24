@@ -69,6 +69,18 @@ int fs_chmod(const char *path, mode_t mode)
     return result;
 }
 
+int fs_rename(const char* from, const char* to)
+{
+    int result = disk_rename(from, to);
+    return result;
+}
+
+int fs_truncate(const char *path, off_t size)
+{
+    int result = disk_truncate(path, size);
+    return result;
+}
+
 int fs_link(const char *from, const char *to)
 {
     int result = disk_link(from, to);
@@ -130,6 +142,8 @@ static struct fuse_operations operations =
         .getattr = fs_getattr,
         .mknod = fs_mknod,
         .chmod = fs_chmod,
+        .rename = fs_rename,
+        .truncate = fs_truncate,
         .link = fs_link,
         .mkdir = fs_mkdir,
         .create = fs_create,

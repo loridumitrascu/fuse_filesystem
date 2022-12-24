@@ -208,6 +208,53 @@ int disk_chmod(const char *path, mode_t mode)
     return 0;
 }
 
+int disk_rename(const char *from, const char *to)
+{
+    // check if source is valid
+    int inode_number = get_file_inode_from_path(from);
+    if (inode_number < 0)
+    {
+        log_message("Source for rename function does not exist!\n");
+        return -ENOENT;
+    }
+
+    // check if destination already exists
+    inode_number = get_file_inode_from_path(to);
+    if (inode_number >= 0)
+    {
+        log_message("Destination for rename function already exists!\n");
+        return -EEXIST;
+    }
+
+    int res = disk_link(from, to);
+    if (res != 0)
+    {
+        log_message("Error while linking for rename!\n");
+        return -ENOENT;
+    }
+
+    res = disk_unlink(from);
+    if (res != 0)
+    {
+        log_message("Error while unlinking for rename!\n");
+        return -ENOENT;
+    }
+
+    return 0;
+}
+
+int disk_truncate(const char *path, off_t size)
+{
+    int inode_number = get_file_inode_from_path(path);
+    if(inode_number<0)
+    {
+        return -ENOENT;
+    }
+
+    truncate_to_size(inode_number, size);
+    return 0;
+}
+
 int disk_link(const char *from, const char *to)
 {
     // Creates a hardlink
@@ -526,6 +573,7 @@ int disk_unlink(const char *path)
     int child_inode_number = get_file_inode_from_path(path);
     if (child_inode_number < 0)
     {
+        log_message("Inexistent file for unlink!\n");
         return -ENOENT;
     }
 
@@ -535,13 +583,14 @@ int disk_unlink(const char *path)
     int parent_inode_number = get_file_inode_from_path(parent_path);
     if (parent_inode_number < 0)
     {
+        log_message("Invalid parent for %s unlink: inode not found for %s\n", path, parent_path);
         return -ENOENT;
     }
 
     inode *child_inode = get_nth_inode(child_inode_number);
 
     // update time stamps
-    if (child_inode->nlink >1)
+    if (child_inode->nlink > 1)
     {
         child_inode->atime = time(NULL);
         child_inode->mtime = time(NULL);
@@ -565,15 +614,15 @@ int disk_rmdir(const char *path)
         return -ENOENT;
     }
 
-    inode* dir_inode = get_nth_inode(dir_inode_number);
-    
-    //rmdir deletes a dir only if it's empty
-    if(dir_inode->size!=0)
+    inode *dir_inode = get_nth_inode(dir_inode_number);
+
+    // rmdir deletes a dir only if it's empty
+    if (dir_inode->size != 0)
     {
-        //dir not empty
+        // dir not empty
         return -ENOTEMPTY;
     }
-    
+
     char parent_path[MAX_PATH];
     char child_name[MAX_FILENAME];
     get_parent_path_and_child_name(path, parent_path, child_name);
@@ -588,10 +637,10 @@ int disk_rmdir(const char *path)
         return -ENOENT;
     }
 
-    //update timestamps for parent
-    inode* parent_dir = get_nth_inode(parent_inode_number);
-    parent_dir->atime=time(NULL);
-    parent_dir->mtime=time(NULL);
+    // update timestamps for parent
+    inode *parent_dir = get_nth_inode(parent_inode_number);
+    parent_dir->atime = time(NULL);
+    parent_dir->mtime = time(NULL);
 
     return 0;
 }

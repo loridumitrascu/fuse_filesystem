@@ -29,6 +29,10 @@ int disk_mknod(const char *path, mode_t mode);
 
 int disk_chmod(const char *path, mode_t mode);
 
+int disk_rename(const char *form, const char *to);
+
+int disk_truncate(const char *path, off_t size);
+
 int disk_link(const char *from, const char *to);
 
 int disk_mkdir(const char *path, mode_t mode);
