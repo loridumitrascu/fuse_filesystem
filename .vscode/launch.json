@@ -7,7 +7,7 @@
             "request": "launch",
             "program": "${fileDirname}/${fileBasenameNoExtension}",
             "args": [
-                "-f","-o","use_ino", "${fileDirname}/mpoint","-d"
+                "-f","-o","use_ino", "${fileDirname}/mpoint","disk_iso"
             ],
             "stopAtEntry": false,
             "cwd": "${fileDirname}",
