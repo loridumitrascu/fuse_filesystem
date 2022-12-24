@@ -18,13 +18,14 @@
 #include "dentry.h"
 
 FILE *log_fis;
+char disk_iso_name[MAX_FILENAME];
 
 void *fs_init(struct fuse_conn_info *conn)
 {
     // function that initialise the file system
-    disk_mount_the_filesystem("disk_image");
-
+    disk_mount_the_filesystem(disk_iso_name);
     log_message("Mounted the filesystem\n");
+    return NULL;
 }
 
 int fs_access(const char *path, int mask)
@@ -157,6 +158,12 @@ static struct fuse_operations operations =
 
 int main(int argc, char *argv[])
 {
+    if(!(argc==6 ||argc ==7))
+    {
+        printf("Incorect number of arguments!\n");
+        return 0;
+    }
+    strcpy(disk_iso_name,argv[--argc]);
     log_fis = log_open();
     fuse_main(argc, argv, &operations, NULL);
     return 0;
