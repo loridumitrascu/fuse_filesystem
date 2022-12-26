@@ -252,6 +252,13 @@ int disk_truncate(const char *path, off_t size)
     }
 
     truncate_to_size(inode_number, size);
+
+    inode *inode = get_nth_inode(inode_number);
+
+    //update timestamps
+    inode->atime = time(NULL);
+    inode->mtime = time(NULL);
+    
     return 0;
 }
 

@@ -92,7 +92,7 @@ void truncate_to_size(int inode_number, int requested_size)
     int inode_size = current_inode->size;
     if (inode_size > requested_size)
     {
-        truncate_down_to_size_for_inode(inode_number, requested_size);
+        truncate_down_to_size_for_inode_no_remove(inode_number, requested_size);
         return;
     }
     if (inode_size < requested_size)
@@ -102,31 +102,9 @@ void truncate_to_size(int inode_number, int requested_size)
     }
 }
 
-void truncate_up_to_size_for_inode(int inode_number, int requested_size)
+void truncate_down_to_size_for_inode_no_remove(int inode_number, int requested_size)
 {
-    inode *current_inode = get_nth_inode(inode_number);
-    int inode_size = current_inode->size;
-    int block_start_number = current_inode->block_number;
-    int current_block = get_last_block_extension_in_list(block_start_number);
-
-    int remaining_size_curr_block = (BLOCK_SIZE - sizeof(int)) - (inode_size % (BLOCK_SIZE - sizeof(int)));
-    int inode_size_new = inode_size + remaining_size_curr_block;
-    int left_size_to_grow = requested_size - inode_size_new;
-    int next_block;
-
-    while (left_size_to_grow > 0)
-    {
-        left_size_to_grow -= (BLOCK_SIZE - sizeof(int));
-        next_block = alloc_new_block_extension(current_block);
-        // update number of blocks for inode
-        current_inode->number_of_blocks++;
-        current_block = next_block;
-    }
-    current_inode->size = requested_size;
-}
-
-void truncate_down_to_size_for_inode(int inode_number, int requested_size)
-{
+    //called for truncate and rm/rmdir operations
     inode *current_inode = get_nth_inode(inode_number);
     int current_block = current_inode->block_number;
     int first_block = current_block;
@@ -145,6 +123,7 @@ void truncate_down_to_size_for_inode(int inode_number, int requested_size)
     {
         while (current_size < requested_size)
         {
+
             current_size += block_util_size;
             int size_to_delete_from_block = requested_size - current_size;
             if (size_to_delete_from_block <= block_util_size)
@@ -168,11 +147,42 @@ void truncate_down_to_size_for_inode(int inode_number, int requested_size)
         free_block(block_to_delete_index);
         block_to_delete_index = next_block_index;
     }
+    current_inode->size = requested_size;
+}
+
+void truncate_up_to_size_for_inode(int inode_number, int requested_size)
+{
+    inode *current_inode = get_nth_inode(inode_number);
+    int inode_size = current_inode->size;
+    int block_start_number = current_inode->block_number;
+    int current_block = get_last_block_extension_in_list(block_start_number);
+
+    int remaining_size_curr_block = (BLOCK_SIZE - sizeof(int)) - (inode_size % (BLOCK_SIZE - sizeof(int)));
+    int inode_size_new = inode_size + remaining_size_curr_block;
+    int left_size_to_grow = requested_size - inode_size_new;
+    int next_block;
+    while (left_size_to_grow > 0)
+    {
+        left_size_to_grow -= (BLOCK_SIZE - sizeof(int));
+        next_block = alloc_new_block_extension(current_block);
+        // update number of blocks for inode
+        current_inode->number_of_blocks++;
+        current_block = next_block;
+    }
+    current_inode->size = requested_size;
+}
+
+void truncate_down_to_size_for_inode(int inode_number, int requested_size)
+{
+    //called only for rm and rmdir opperations
+    inode *current_inode = get_nth_inode(inode_number);
+    truncate_down_to_size_for_inode_no_remove(inode_number,requested_size);
+    int current_block = current_inode->block_number;
+    int first_block = current_block;
     if(requested_size==0 && current_inode->inode_number!=0) 
     {
         free_block(first_block);
     }
-    current_inode->size = requested_size;
 }
 
 void initialise_root()

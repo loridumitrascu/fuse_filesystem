@@ -29,6 +29,7 @@ void free_inode(int index);
 void truncate_to_size(int inode_number, int requested_size);
 void truncate_up_to_size_for_inode(int inode_number, int requested_size);
 void truncate_down_to_size_for_inode(int inode_number, int requested_size);
+void truncate_down_to_size_for_inode_no_remove(int inode_number, int requested_size);
 void initialise_root();
 void update_root();
 #endif
