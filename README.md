@@ -41,6 +41,8 @@ Sistemul de fișiere  poate realiza următoarele funcționalități:
 
 &emsp; • Stocare persistentă - structura sistemului de fișiere va fi păstrată după demontare;
 
+&emsp; • Se pune la dispoziție un fișier de logare care să poată sa ajute la eventuale depanări ale programuluiș
+
   ## Dependente
   Pentru a putea rula programul, este nevoie de biblioteca libfuse-dev. Ea se poate instala folosind scriptul pus la dispoziție cu opțiunea ```-i ``` sau folosind următoarele comenzi:
 
