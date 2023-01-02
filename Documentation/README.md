@@ -70,36 +70,6 @@ Inode-ul va avea următoarea structură:
 &emsp; • Putem vedea cu ușurință câte inoduri și blocuri de date sunt libere analizând structura de date bitmap (o căutare constantă în timp ce va reduce timpul de așteptare);
 &emsp; •  Cu fișiere mai mici avem acces foarte rapid la date. Pentru fișiere mai mari există șansa să se ocupe blocurile disponibile foarte repede.
 
-## Ce operații vor fi disponibile în sistemul de fișiere?
-
-Sistemul de fișiere ar trebui să poată realiza următoarele funcționalități:
-
-&emsp; • Crearea și ștergerea un director;
-
-&emsp; • Crearea, ștergerea, citirea, scrierea într-un fișier;
-
-&emsp; • Trunchierea unui fișier (modificarea unui fișier);
-
-&emsp; • Acceptă metadata (permisiuni și timestamps);
-
-&emsp; • Deschiderea și închiderea un fișier;
-
-&emsp; • Listarea fișierelor dintr-un anumit director sau de la rădăcină;
-
-&emsp; • Crearea de subdirectoare;
-
-&emsp; • Redenumirea unui fișier;
-
-&emsp; • Stocare persistentă;
-
-&emsp; • Asigurarea securității sistemului de fișiere prin criptarea acestuia.
-
-## Instalarea bibliotecii libfuse-dev se va face astfel:
-
-```
-sudo apt-get update
-sudo apt-get install libfuse-dev
-```
 
 ## Detalii de implementare:
 
@@ -158,19 +128,54 @@ Modul prin care se face asocierea dintre o cale dată și un fișier este sparge
 
 ### 1.fs_init
 
-Funcția se ocupă cu inițializarea sistemului de fișiere
+Funcția se ocupă cu inițializarea sistemului de fișiere.
 
 ### 2.fs_access
 
 Funcție care corespunde apelului de sistem access(2).
 Ea verifică existența unui fișier/director și dacă utilizatorul are permisiunile necesare.
-În plus, se vor modifica access time și change time.
 
 ### 3.fs_getattr
 Funcție ce va fi apelată de către stat. De asemenea, e apelată când se doresc informațiile din inode. (structura stat)
 
-### 4.fs.mknod
-Funcție ce va fi apelată la crearea unui fișier regulat nou. 
-În plus, se vor modifica și access time, modify time si change time.
+### 4.fs_mknod
+Funcție ce va fi apelată la crearea unui fișier regulat nou (e.g. touch).
 
+### 5.fs_chmod
+Funcție ce va fi apelată pentru schimbarea bițiilor de permisiune ai unui fișier (e.g. chmod).
 
+### 6.fs_rename
+Funcție ce va fi apelată pentru a redenumi un fișier sau un director (e.g. mv). Funcția va face, de fapt, o copiere urmată de o ștergere (link & unlink).
+
+### 7.fs_truncate
+Funcția este folosită pentru a micșora sau mări dimensiunea unui fișier. Această funcție este esențială pentru scrieri și citiri (funcția nano sau redirectarea în fișier cu suprascriere vor apela fs_truncate înainte de a face scrierea/citirea)
+
+### 8.fs_link
+Funcția se va folosi pentru a crea hard linkuri. 
+
+### 9.fs_mkdir
+Funcție ce va fi apelată la crearea unui director nou.
+
+### 10.fs_create
+Funcție ce va fi apelată la crearea unui fișier regulat nou. Este necesară pentru funcționarea corectă a comenzii touch.
+
+### 11.fs_utimens
+Funcția va modifica acces/modify time pentru un fișier/director. Funcția nu este esențială,dar ajută pentru funcționarea corespunzătoare a unor funcții precum touch.
+
+### 12.fs_readdir
+Funcția va citi conținutul unui director într-o structură ```fuse_file_info*``` ajutându-se de o funcție specială FUSE: ```fuse_fill_dir_t```. Această funcție este esențială pentru comanda ls și pentru lucrul cu subdirectoarele.
+
+### 13.fs_write
+Funcția este folosită pentru a scrie datele într-un fișier, asigurându-se că se alocă suficient spațiu atunci când este nevoie.
+
+### 14.fs_read
+Funcția este folosită pentru a citi datele dintr-un fișier oricât de mare. 
+
+### 16.fs_unlink
+Funcție ce va fi apelată la ștergerea unui fișier regulat/hard link/symbolic link. (Se va șterge doar la ștergerea ultimul hard link).
+
+### 17.fs_rmdir
+Funcție ce va fi apelată la ștergerea unui director gol.
+
+### 18.fs_symlink
+Funcția va crea un link simbolic pentru un fișier.
