@@ -50,7 +50,6 @@ int alloc_block()
             return i;
         }
     }
-    printf("No block available!\n");
     return -1;
 }
 

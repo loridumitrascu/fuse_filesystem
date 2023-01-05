@@ -136,6 +136,18 @@ int fs_rmdir(const char* path)
     return result;
 }
 
+int fs_symlink(const char *from, const char *to)
+{
+    int result = disk_symlink(from,to);
+    return result;
+}
+
+int fs_readlink(const char *path, char *buf, size_t size)
+{
+    int result = disk_readlink(path,buf,size);
+    return result;
+}
+
 static struct fuse_operations operations =
     {
         .init = fs_init,
@@ -153,7 +165,9 @@ static struct fuse_operations operations =
         .write = fs_write,
         .read = fs_read,
         .unlink = fs_unlink,
-        .rmdir = fs_rmdir
+        .rmdir = fs_rmdir,
+        .symlink = fs_symlink,
+        .readlink = fs_readlink
 };
 
 int main(int argc, char *argv[])

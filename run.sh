@@ -65,7 +65,7 @@ if [ $# -eq 0 ]
         then
             make mount_point=$2 disk_path=$3 clean
         else
-            echo "Invalid command. Format: ./run.sh -c <mount_point> <disk_image_name>"
+            echo "Invalid command. Format: ./run.sh -x <mount_point> <disk_image_name>"
         fi
         ;;
 

@@ -48,10 +48,11 @@ int get_file_inode_from_path(const char *path)
     char *curr_name = strtok(aux_path + 1, "/");
 
     while (curr_name != NULL)
-    {
+    {   
         int curr_inode = get_file_inode_from_parent_dir(curr_parent_inode, curr_name);
         if (curr_inode < 0)
         {
+            log_message("Nu gaseste fisierul:%s\n",curr_name);
             return -1;
         }
         curr_parent_inode = curr_inode;

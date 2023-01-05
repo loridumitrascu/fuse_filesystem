@@ -96,13 +96,11 @@ void unmap_filesystem(void *disk_iso_base)
 int disk_access(const char *entry_path)
 {
     // check if the path is a valid and the file/dir exists
-    log_message("%s\n", entry_path);
     int inode_number = get_file_inode_from_path(entry_path);
     if (inode_number < 0)
         return -1;
 
     // update the timestamps for given inode
-    log_message("%d\n", inode_number);
     inode *inode = get_nth_inode(inode_number);
     inode->atime = time(NULL);
     inode->ctime = time(NULL);
@@ -649,5 +647,75 @@ int disk_rmdir(const char *path)
     parent_dir->atime = time(NULL);
     parent_dir->mtime = time(NULL);
 
+    return 0;
+}
+
+int disk_symlink(const char *from, const char *to)
+{
+    // Creates a symbolic link
+    char new_path[MAX_PATH];
+    strcpy(new_path,"/");
+    strcat(new_path,from);
+    int source_inode_number = get_file_inode_from_path(new_path);
+    
+    if (source_inode_number < 0)
+    {
+        log_message("Invalid source for link operation\n");
+        return -ENOENT;
+    }
+
+    int destination_inode = get_file_inode_from_path(to);
+    if (destination_inode > 0)
+    {
+        log_message("Destination already exists for link operation\n");
+        return -EEXIST;
+    }
+
+    char parent_dest_path[MAX_PATH], dest_name[MAX_FILENAME];
+    get_parent_path_and_child_name(to, parent_dest_path, dest_name);
+    int parent_dest_inode_number = get_file_inode_from_path(parent_dest_path);
+    if (parent_dest_inode_number < 0)
+    {
+        log_message("Impossible to reach destination\n");
+        return -ENOENT;
+    }
+
+    //create symbolic link
+    inode *new_inode = alloc_inode();
+    if (new_inode<0)
+    {
+        log_message("mknod: child_inode not correctly allocated!\n");
+        return -1;
+    }
+    //put the mode for symbolic link
+    new_inode->mode =S_IFLNK | 0777;
+    int new_inode_number = new_inode->inode_number;
+    //store for symlink the source path in his data block
+    void * file_block = nth_block_pointer(new_inode->block_number);
+    strcpy(file_block, from);
+    new_inode->size = strlen(from);
+
+    log_message("%s - %s - %d\n",parent_dest_inode_number,dest_name,new_inode_number);
+    add_dir_to_inode_dentries(parent_dest_inode_number,dest_name, new_inode_number);
+
+    return 0;
+}
+
+int disk_readlink(const char *path, char *buf, size_t size)
+{
+    int symlink_inode_number = get_file_inode_from_path(path);
+    if (symlink_inode_number < 0)
+    {
+        return -ENOENT;
+    }
+    
+    inode* symlink_inode = get_nth_inode(symlink_inode_number);
+    
+    //read the target from symlink block
+    void *file_block = nth_block_pointer(symlink_inode->block_number);
+    strncpy(buf, file_block, size);
+
+    symlink_inode->atime = time(NULL);
+    
     return 0;
 }

@@ -31,7 +31,7 @@ int get_first_free_inode_from_ibitmap()
         if (bit_map_get_bit(inode_bitmap_base, i) == 0)
             return i;
     }
-    printf("Max inode number reached\n"); // TO DO - LOGFILE
+    log_message("Inode bitmap:Max inode number reached\n"); 
     return -1;
 }
 
