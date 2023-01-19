@@ -172,11 +172,11 @@ Funcția este folosită pentru a scrie datele într-un fișier, asigurându-se c
 ### 14.fs_read
 Funcția este folosită pentru a citi datele dintr-un fișier oricât de mare. 
 
-### 16.fs_unlink
+### 15.fs_unlink
 Funcție ce va fi apelată la ștergerea unui fișier regulat/hard link/symbolic link. (Se va șterge doar la ștergerea ultimul hard link).
 
-### 17.fs_rmdir
+### 16.fs_rmdir
 Funcție ce va fi apelată la ștergerea unui director gol.
 
-### 18.fs_symlink
+### 17.fs_symlink
 Funcția va crea un link simbolic pentru un fișier.
