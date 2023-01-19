@@ -68,6 +68,7 @@ Inode-ul va avea următoarea structură:
 
 ## Avantajele folosirii arhitecturii alese:
 &emsp; • Putem vedea cu ușurință câte inoduri și blocuri de date sunt libere analizând structura de date bitmap (o căutare constantă în timp ce va reduce timpul de așteptare);
+
 &emsp; •  Cu fișiere mai mici avem acces foarte rapid la date. Pentru fișiere mai mari există șansa să se ocupe blocurile disponibile foarte repede.
 
 
